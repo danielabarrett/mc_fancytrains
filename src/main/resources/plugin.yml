@@ -1,0 +1,19 @@
+name: fancytrains
+version: '1.0-SNAPSHOT'
+main: me.bambam250.fancytrains.Fancytrains
+api-version: '1.21'
+
+commands:
+  station:
+    description: Manage train stations
+    usage: /station <create|remove|list|settrain> [name]
+    permission: fancytrains.admin
+    aliases: [st, stations]
+
+permissions:
+  fancytrains.admin:
+    description: Allows management of train stations
+    default: op
+  fancytrains.use:
+    description: Allows using train stations
+    default: true

@@ -1,8 +1,10 @@
 package me.bambam250.fancytrains;
 
 import org.bukkit.*;
+import org.bukkit.block.Banner;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.EntityType;
@@ -17,6 +19,7 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.BannerMeta;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -27,7 +30,7 @@ import java.util.*;
 import java.util.logging.Level;
 
 public final class Fancytrains extends JavaPlugin implements Listener {
-
+    private final List<Material> BANNERS = List.of(Material.BLACK_BANNER, Material.BLUE_BANNER, Material.BROWN_BANNER, Material.CYAN_BANNER, Material.GRAY_BANNER, Material.GREEN_BANNER, Material.LIGHT_BLUE_BANNER, Material.LIGHT_GRAY_BANNER, Material.LIME_BANNER, Material.MAGENTA_BANNER, Material.ORANGE_BANNER, Material.PINK_BANNER, Material.PURPLE_BANNER, Material.RED_BANNER, Material.WHITE_BANNER, Material.YELLOW_BANNER);
     private File stationsFile;
     private FileConfiguration stationsConfig;
     private Map<UUID, String> travelingPlayers = new HashMap<>();
@@ -72,28 +75,28 @@ public final class Fancytrains extends JavaPlugin implements Listener {
                 stationsConfig.createSection("train-lines");
 
                 // Add example train lines (countries)
-                stationsConfig.set("train-lines.usa.display-name", "United States");
-                stationsConfig.set("train-lines.usa.color", "BLUE");
-                stationsConfig.set("train-lines.canada.display-name", "Canada");
-                stationsConfig.set("train-lines.canada.color", "RED");
-                stationsConfig.set("train-lines.uk.display-name", "United Kingdom");
-                stationsConfig.set("train-lines.uk.color", "GREEN");
+//                stationsConfig.set("train-lines.usa.display-name", "United States");
+//                stationsConfig.set("train-lines.usa.color", "BLUE");
+//                stationsConfig.set("train-lines.canada.display-name", "Canada");
+//                stationsConfig.set("train-lines.canada.color", "RED");
+//                stationsConfig.set("train-lines.uk.display-name", "United Kingdom");
+//                stationsConfig.set("train-lines.uk.color", "GREEN");
 
                 // Add example station
-                stationsConfig.set("stations.example.world", "world");
-                stationsConfig.set("stations.example.x", 0.0);
-                stationsConfig.set("stations.example.y", 64.0);
-                stationsConfig.set("stations.example.z", 0.0);
-                stationsConfig.set("stations.example.display-name", "Example Station");
-                stationsConfig.set("stations.example.train-line", "usa");
-                stationsConfig.set("stations.example.npc-spawned", false);
-                stationsConfig.set("stations.example.connections", Arrays.asList());
+//                stationsConfig.set("stations.example.world", "world");
+//                stationsConfig.set("stations.example.x", 0.0);
+//                stationsConfig.set("stations.example.y", 64.0);
+//                stationsConfig.set("stations.example.z", 0.0);
+//                stationsConfig.set("stations.example.display-name", "Example Station");
+//                stationsConfig.set("stations.example.train-line", "usa");
+//                stationsConfig.set("stations.example.npc-spawned", false);
+//                stationsConfig.set("stations.example.connections", Arrays.asList());
 
                 // Add example train location
-                stationsConfig.set("train-locations.example.world", "world");
-                stationsConfig.set("train-locations.example.x", 0.0);
-                stationsConfig.set("train-locations.example.y", 64.0);
-                stationsConfig.set("train-locations.example.z", 5.0);
+//                stationsConfig.set("train-locations.example.world", "world");
+//                stationsConfig.set("train-locations.example.x", 0.0);
+//                stationsConfig.set("train-locations.example.y", 64.0);
+//                stationsConfig.set("train-locations.example.z", 5.0);
 
                 stationsConfig.save(stationsFile);
             } catch (IOException e) {
@@ -165,16 +168,21 @@ public final class Fancytrains extends JavaPlugin implements Listener {
         if (command.getName().equalsIgnoreCase("station")) {
             if (args.length == 0) {
                 player.sendMessage(ChatColor.YELLOW + "Train Station Commands:");
-                player.sendMessage(ChatColor.GRAY + "/station create <name> - Create a new station");
-                player.sendMessage(ChatColor.GRAY + "/station remove <name> - Remove a station");
-                player.sendMessage(ChatColor.GRAY + "/station list - List all stations");
-                player.sendMessage(ChatColor.GRAY + "/station settrain <name> - Set train location for station");
+                player.sendMessage(ChatColor.GREEN + "/station list" + ChatColor.GRAY + " - List all available stations");
+                player.sendMessage(ChatColor.GREEN + "/station create" + ChatColor.GRAY + " <name> - Create a new station");
+                player.sendMessage(ChatColor.GREEN + "/station remove" + ChatColor.GRAY + " <name> - Remove a station");
+                player.sendMessage(ChatColor.GREEN + "/station settrain" + ChatColor.GRAY + " <name> - Set train location for station");
+                player.sendMessage(ChatColor.GREEN + "/station setlineflag" + ChatColor.GRAY + " <name> - Set the line's international flag to a banner in your main hand");
+                player.sendMessage(ChatColor.GREEN + "/station connect" + ChatColor.GRAY + " <station1> <station2> - Connect two stations together");
+                player.sendMessage(ChatColor.GREEN + "/station disconnect" + ChatColor.GRAY + " <station1> <station2> - Disconnect two stations");
+                player.sendMessage(ChatColor.GREEN + "/station lines" + ChatColor.GRAY + " - List all available train lines");
+                player.sendMessage(ChatColor.GREEN + "/station addline" + ChatColor.GRAY + " <name> <display name> <color> - Create a new train line");
                 return true;
             }
 
             if (args[0].equalsIgnoreCase("create")) {
                 if (args.length < 2) {
-                    player.sendMessage(ChatColor.RED + "Usage: /station create <name>");
+                    player.sendMessage(ChatColor.RED + "Usage: /station create <station name>");
                     return true;
                 }
 
@@ -185,10 +193,10 @@ public final class Fancytrains extends JavaPlugin implements Listener {
                 }
 
                 String stationLine = args[2].toLowerCase();
-//                if (!stationsConfig.contains("lines." + stationLine)) {
-//                    player.sendMessage(ChatColor.RED + "Line does not exist!");
-//                    return true;
-//                }
+                if (!stationsConfig.contains("lines." + stationLine)) {
+                    player.sendMessage(ChatColor.RED + "Line does not exist!");
+                    return true;
+                }
 
                 createStation((Player) sender, stationName, stationLine);
                 return true;
@@ -196,7 +204,7 @@ public final class Fancytrains extends JavaPlugin implements Listener {
 
             if (args[0].equalsIgnoreCase("remove")) {
                 if (args.length < 2) {
-                    player.sendMessage(ChatColor.RED + "Usage: /station remove <name>");
+                    player.sendMessage(ChatColor.RED + "Usage: /station remove <station name>");
                     return true;
                 }
 
@@ -218,7 +226,7 @@ public final class Fancytrains extends JavaPlugin implements Listener {
 
             if (args[0].equalsIgnoreCase("settrain")) {
                 if (args.length < 2) {
-                    player.sendMessage(ChatColor.RED + "Usage: /station settrain <name>");
+                    player.sendMessage(ChatColor.RED + "Usage: /station settrain <station name>");
                     return true;
                 }
 
@@ -264,6 +272,21 @@ public final class Fancytrains extends JavaPlugin implements Listener {
                 }
 
                 addTrainLine(player, args[1].toLowerCase(), args[2], args[3].toUpperCase());
+                return true;
+            }
+
+            if (args[0].equalsIgnoreCase("setlineflag")) {
+                if (args.length < 2) {
+                    player.sendMessage(ChatColor.RED + "Usage: /station setlineflag <line name>");
+                    return true;
+                }
+                ItemStack flag = player.getInventory().getItemInMainHand();
+                if (!(flag.getItemMeta() instanceof BannerMeta)) {
+                    player.sendMessage(ChatColor.RED + "Please hold a banner when using this command");
+                    return true;
+                }
+                setLineFlag(args[1], flag);
+                player.sendMessage(ChatColor.GREEN + "Saved this flag for " + args[1]);
                 return true;
             }
         }
@@ -420,6 +443,10 @@ public final class Fancytrains extends JavaPlugin implements Listener {
         player.sendMessage(ChatColor.GREEN + "Added train line: " + color + displayName);
     }
 
+    private void setLineFlag(String lineName, ItemStack flag) {
+        saveBannerToConfig(flag, "train-lines." + lineName + ".flag");
+    }
+
     private void spawnStationNPC(String stationName) {
         String worldName = stationsConfig.getString("stations." + stationName + ".world");
         double x = stationsConfig.getDouble("stations." + stationName + ".x");
@@ -531,7 +558,7 @@ public final class Fancytrains extends JavaPlugin implements Listener {
         ItemStack international = new ItemStack(Material.DIAMOND);
         ItemMeta internationalMeta = international.getItemMeta();
         internationalMeta.setDisplayName(ChatColor.BLUE + "International Travel");
-        internationalMeta.setLore(Arrays.asList(ChatColor.GRAY + "Travel to other countries"));
+        internationalMeta.setLore(Arrays.asList(ChatColor.GRAY + "Travel to other nations"));
         international.setItemMeta(internationalMeta);
         inv.setItem(5, international);
 
@@ -568,7 +595,13 @@ public final class Fancytrains extends JavaPlugin implements Listener {
             String lineDisplayName = stationsConfig.getString("train-lines." + trainLine + ".display-name");
             ChatColor lineColor = ChatColor.valueOf(stationsConfig.getString("train-lines." + trainLine + ".color"));
 
-            ItemStack item = new ItemStack(travelType.equals("domestic") ? Material.RAIL : Material.POWERED_RAIL);
+            ItemStack item;
+            if (travelType.equals("domestic")) {
+                item = new ItemStack(Material.RAIL);
+            } else {
+                String lineName = stationsConfig.getString("stations." + stationName + ".train-line");
+                item = loadBannerFromConfig("train-lines." + lineName + ".flag");
+            }
             ItemMeta meta = item.getItemMeta();
 
             String displayName = stationsConfig.getString("stations." + stationName + ".display-name");
@@ -625,7 +658,7 @@ public final class Fancytrains extends JavaPlugin implements Listener {
 
             if (event.getCurrentItem() == null ||
                     (event.getCurrentItem().getType() != Material.RAIL &&
-                            event.getCurrentItem().getType() != Material.POWERED_RAIL)) return;
+                            !BANNERS.contains(event.getCurrentItem().getType()))) return;
 
             String displayName = ChatColor.stripColor(event.getCurrentItem().getItemMeta().getDisplayName());
 
@@ -681,8 +714,8 @@ public final class Fancytrains extends JavaPlugin implements Listener {
 //            player.sendMessage(ChatColor.GREEN + "All aboard! Traveling to " + destinationDisplayName);
 //        }
 
-        // Play sound and effects
-        player.playSound(player.getLocation(), Sound.ENTITY_MINECART_RIDING, 1.0f, 1.0f);
+        // Play sound and effects (duplicate from runnable task)
+//        player.playSound(player.getLocation(), Sound.ENTITY_MINECART_RIDING, 1.0f, 1.0f);
 
         // Travel Time based on distance
 //        int travelTime = travelType.equals("international") ? 100 : 60; // 5 seconds vs 3 seconds
@@ -729,7 +762,8 @@ public final class Fancytrains extends JavaPlugin implements Listener {
                 }
 
                 if (ticks % 20 == 0) {
-                    Sound sound = travelType.equals("international") ? Sound.BLOCK_PORTAL_AMBIENT : Sound.ENTITY_MINECART_RIDING;
+//                    Sound sound = travelType.equals("international") ? Sound.BLOCK_PORTAL_AMBIENT : Sound.ENTITY_MINECART_RIDING;
+                    Sound sound =  Sound.ENTITY_MINECART_RIDING;
                     player.playSound(loc, sound, 0.5f, 1.0f);
                 }
 
@@ -824,5 +858,81 @@ public final class Fancytrains extends JavaPlugin implements Listener {
     }
 
     public static String console_prefix = ChatColor.GRAY + "[" + ChatColor.GREEN + "FancyTrains" + ChatColor.GRAY + "] " + ChatColor.RESET;
+
+    /**
+     * Save a banner item to config using serialization
+     * @param banner The banner ItemStack to save
+     * @param configPath The path in config (e.g. "banners.guild-banner")
+     * @return True if saved successfully, false otherwise
+     */
+    public boolean saveBannerToConfig(ItemStack banner, String configPath) {
+        if (banner == null || !(banner.getItemMeta() instanceof BannerMeta)) {
+            this.getLogger().warning("Attempted to save null or non-banner item to config");
+            return false;
+        }
+
+        try {
+            // Serialize the ItemStack to a Map
+            Map<String, Object> serializedBanner = banner.serialize();
+
+            // Save the serialized data to config
+            stationsConfig.set(configPath, serializedBanner);
+
+            // Save the config file
+            this.saveConfig();
+
+            this.getLogger().info("Banner serialized and saved to config at path: " + configPath);
+            return true;
+
+        } catch (Exception e) {
+            this.getLogger().severe("Error saving banner to config: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    /**
+     * Load a banner item from config using deserialization
+     * @param configPath The path in config (e.g. "banners.guild-banner")
+     * @return The loaded banner ItemStack, or null if not found/invalid
+     */
+    public ItemStack loadBannerFromConfig(String configPath) {
+        try {
+            // Get the serialized data from config
+            ConfigurationSection section = stationsConfig.getConfigurationSection(configPath);
+
+            if (section == null) {
+                this.getLogger().warning("No banner found at config path: " + configPath);
+                return new ItemStack(Material.WHITE_BANNER);
+            }
+
+            // Convert ConfigurationSection to Map
+            Map<String, Object> serializedData = section.getValues(false);
+
+            if (serializedData.isEmpty()) {
+                this.getLogger().warning("Empty data found at config path: " + configPath);
+                return new ItemStack(Material.WHITE_BANNER);
+            }
+
+            // Deserialize the ItemStack from the Map
+            ItemStack banner = ItemStack.deserialize(serializedData);
+
+            // Verify it's actually a banner
+            if (!(banner.getItemMeta() instanceof BannerMeta)) {
+                this.getLogger().warning("Loaded item is not a banner at path: " + configPath);
+                return new ItemStack(Material.WHITE_BANNER);
+            }
+
+            this.getLogger().info("Banner loaded from config at path: " + configPath);
+            return banner;
+
+        } catch (Exception e) {
+            this.getLogger().severe("Error loading banner from config: " + e.getMessage());
+            e.printStackTrace();
+            return new ItemStack(Material.WHITE_BANNER);
+        }
+
+    }
+
 
 }

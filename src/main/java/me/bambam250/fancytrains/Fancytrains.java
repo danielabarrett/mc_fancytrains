@@ -72,15 +72,15 @@ public final class Fancytrains extends JavaPlugin implements Listener {
                 // Create default structure
                 stationsConfig.createSection("stations");
                 stationsConfig.createSection("train-locations");
-                stationsConfig.createSection("train-lines");
+                stationsConfig.createSection("lines");
 
                 // Add example train lines (countries)
-//                stationsConfig.set("train-lines.usa.display-name", "United States");
-//                stationsConfig.set("train-lines.usa.color", "BLUE");
-//                stationsConfig.set("train-lines.canada.display-name", "Canada");
-//                stationsConfig.set("train-lines.canada.color", "RED");
-//                stationsConfig.set("train-lines.uk.display-name", "United Kingdom");
-//                stationsConfig.set("train-lines.uk.color", "GREEN");
+//                stationsConfig.set("lines.usa.display-name", "United States");
+//                stationsConfig.set("lines.usa.color", "BLUE");
+//                stationsConfig.set("lines.canada.display-name", "Canada");
+//                stationsConfig.set("lines.canada.color", "RED");
+//                stationsConfig.set("lines.uk.display-name", "United Kingdom");
+//                stationsConfig.set("lines.uk.color", "GREEN");
 
                 // Add example station
 //                stationsConfig.set("stations.example.world", "world");
@@ -285,7 +285,7 @@ public final class Fancytrains extends JavaPlugin implements Listener {
                     player.sendMessage(ChatColor.RED + "Please hold a banner when using this command");
                     return true;
                 }
-                setLineFlag(args[1], flag);
+                setLineFlag(player, args[1], flag);
                 player.sendMessage(ChatColor.GREEN + "Saved this flag for " + args[1]);
                 return true;
             }
@@ -319,7 +319,7 @@ public final class Fancytrains extends JavaPlugin implements Listener {
 
         spawnStationNPC(stationName);
 
-        String lineDisplayName = stationsConfig.getString("train-lines." + trainLine + ".display-name");
+        String lineDisplayName = stationsConfig.getString("lines." + trainLine + ".display-name");
         player.sendMessage(ChatColor.GREEN + "Station created on " + lineDisplayName + " line! Use /station settrain " + stationName + " to customize train location.");
     }
 
@@ -342,8 +342,8 @@ public final class Fancytrains extends JavaPlugin implements Listener {
         for (String stationName : stationsConfig.getConfigurationSection("stations").getKeys(false)) {
             String displayName = stationsConfig.getString("stations." + stationName + ".display-name");
             String trainLine = stationsConfig.getString("stations." + stationName + ".train-line");
-            String lineDisplayName = stationsConfig.getString("train-lines." + trainLine + ".display-name");
-            ChatColor lineColor = ChatColor.valueOf(stationsConfig.getString("train-lines." + trainLine + ".color"));
+            String lineDisplayName = stationsConfig.getString("lines." + trainLine + ".display-name");
+            ChatColor lineColor = ChatColor.valueOf(stationsConfig.getString("lines." + trainLine + ".color"));
 
             player.sendMessage(ChatColor.GRAY + "- " + displayName + " " + lineColor + "(" + lineDisplayName + ")");
         }
@@ -409,21 +409,21 @@ public final class Fancytrains extends JavaPlugin implements Listener {
     }
 
     private void listTrainLines(Player player) {
-        if (stationsConfig.getConfigurationSection("train-lines") == null) {
+        if (stationsConfig.getConfigurationSection("lines") == null) {
             player.sendMessage(ChatColor.YELLOW + "No train lines found!");
             return;
         }
 
         player.sendMessage(ChatColor.YELLOW + "Available Train Lines:");
-        for (String lineName : stationsConfig.getConfigurationSection("train-lines").getKeys(false)) {
-            String displayName = stationsConfig.getString("train-lines." + lineName + ".display-name");
-            ChatColor color = ChatColor.valueOf(stationsConfig.getString("train-lines." + lineName + ".color"));
+        for (String lineName : stationsConfig.getConfigurationSection("lines").getKeys(false)) {
+            String displayName = stationsConfig.getString("lines." + lineName + ".display-name");
+            ChatColor color = ChatColor.valueOf(stationsConfig.getString("lines." + lineName + ".color"));
             player.sendMessage(color + "- " + displayName + " (" + lineName + ")");
         }
     }
 
     private void addTrainLine(Player player, String lineName, String displayName, String colorName) {
-        if (stationsConfig.contains("train-lines." + lineName)) {
+        if (stationsConfig.contains("lines." + lineName)) {
             player.sendMessage(ChatColor.RED + "Train line already exists!");
             return;
         }
@@ -435,16 +435,18 @@ public final class Fancytrains extends JavaPlugin implements Listener {
             return;
         }
 
-        stationsConfig.set("train-lines." + lineName + ".display-name", displayName);
-        stationsConfig.set("train-lines." + lineName + ".color", colorName);
+        stationsConfig.set("lines." + lineName + ".display-name", displayName);
+        stationsConfig.set("lines." + lineName + ".color", colorName);
         saveStations();
 
         ChatColor color = ChatColor.valueOf(colorName);
         player.sendMessage(ChatColor.GREEN + "Added train line: " + color + displayName);
     }
 
-    private void setLineFlag(String lineName, ItemStack flag) {
-        saveBannerToConfig(flag, "train-lines." + lineName + ".flag");
+    private void setLineFlag(Player player, String lineName, ItemStack flag) {
+        saveBannerToConfig(flag, "lines." + lineName + ".flag");
+        saveStations();
+        player.sendMessage(ChatColor.GREEN + "Added flag to " + lineName);
     }
 
     private void spawnStationNPC(String stationName) {
@@ -462,8 +464,8 @@ public final class Fancytrains extends JavaPlugin implements Listener {
 
         String displayName = stationsConfig.getString("stations." + stationName + ".display-name");
         String trainLine = stationsConfig.getString("stations." + stationName + ".train-line");
-        String lineDisplayName = stationsConfig.getString("train-lines." + trainLine + ".display-name");
-        ChatColor lineColor = ChatColor.valueOf(stationsConfig.getString("train-lines." + trainLine + ".color"));
+        String lineDisplayName = stationsConfig.getString("lines." + trainLine + ".display-name");
+        ChatColor lineColor = ChatColor.valueOf(stationsConfig.getString("lines." + trainLine + ".color"));
 
         npc.setCustomName(ChatColor.GOLD + "Station Master - " + displayName + " " + lineColor + "(" + lineDisplayName + ")");
         npc.setCustomNameVisible(true);
@@ -502,7 +504,7 @@ public final class Fancytrains extends JavaPlugin implements Listener {
             double z = stationsConfig.getDouble("stations." + stationName + ".z");
 
             if (npcLoc.getWorld().getName().equals(worldName) &&
-                    npcLoc.distanceSquared(new Location(npcLoc.getWorld(), x, y, z)) < 25) { // Within 5 blocks
+                    npcLoc.distanceSquared(new Location(npcLoc.getWorld(), x, y, z)) < 100) { // Within 5 blocks
                 return stationName;
             }
         }
@@ -549,7 +551,7 @@ public final class Fancytrains extends JavaPlugin implements Listener {
         ItemMeta domesticMeta = domestic.getItemMeta();
         domesticMeta.setDisplayName(ChatColor.GREEN + "Domestic Travel");
         String currentLine = stationsConfig.getString("stations." + currentStation + ".train-line");
-        String lineDisplayName = stationsConfig.getString("train-lines." + currentLine + ".display-name");
+        String lineDisplayName = stationsConfig.getString("lines." + currentLine + ".display-name");
         domesticMeta.setLore(Arrays.asList(ChatColor.GRAY + "Travel within " + lineDisplayName));
         domestic.setItemMeta(domesticMeta);
         inv.setItem(3, domestic);
@@ -567,6 +569,7 @@ public final class Fancytrains extends JavaPlugin implements Listener {
 
     private void openDestinationMenu(Player player, String currentStation, String travelType) {
         Set<String> connections = stationConnections.get(currentStation);
+        Bukkit.getLogger().log(Level.INFO, "getting connections for station " + currentStation + " travel type " + travelType);
         String currentLine = stationsConfig.getString("stations." + currentStation + ".train-line");
 
         // Filter connections based on travel type
@@ -592,15 +595,15 @@ public final class Fancytrains extends JavaPlugin implements Listener {
         int slot = 0;
         for (String stationName : filteredConnections) {
             String trainLine = stationsConfig.getString("stations." + stationName + ".train-line");
-            String lineDisplayName = stationsConfig.getString("train-lines." + trainLine + ".display-name");
-            ChatColor lineColor = ChatColor.valueOf(stationsConfig.getString("train-lines." + trainLine + ".color"));
+            String lineDisplayName = stationsConfig.getString("lines." + trainLine + ".display-name");
+            ChatColor lineColor = ChatColor.valueOf(stationsConfig.getString("lines." + trainLine + ".color"));
 
             ItemStack item;
             if (travelType.equals("domestic")) {
                 item = new ItemStack(Material.RAIL);
             } else {
                 String lineName = stationsConfig.getString("stations." + stationName + ".train-line");
-                item = loadBannerFromConfig("train-lines." + lineName + ".flag");
+                item = loadBannerFromConfig("lines." + lineName + ".flag");
             }
             ItemMeta meta = item.getItemMeta();
 
@@ -705,7 +708,7 @@ public final class Fancytrains extends JavaPlugin implements Listener {
 
         String destinationDisplayName = stationsConfig.getString("stations." + destinationStation + ".display-name");
         String destinationLine = stationsConfig.getString("stations." + destinationStation + ".train-line");
-        String lineDisplayName = stationsConfig.getString("train-lines." + destinationLine + ".display-name");
+        String lineDisplayName = stationsConfig.getString("lines." + destinationLine + ".display-name");
 
 //        if (travelType.equals("international")) {
 //            player.sendMessage(ChatColor.GOLD + "All aboard the international express!");
@@ -795,7 +798,7 @@ public final class Fancytrains extends JavaPlugin implements Listener {
 
         String displayName = stationsConfig.getString("stations." + stationName + ".display-name");
         String trainLine = stationsConfig.getString("stations." + stationName + ".train-line");
-        String lineDisplayName = stationsConfig.getString("train-lines." + trainLine + ".display-name");
+        String lineDisplayName = stationsConfig.getString("lines." + trainLine + ".display-name");
 
         if (travelType.equals("international")) {
             player.sendMessage(ChatColor.GOLD + "Welcome to " + lineDisplayName + "!");

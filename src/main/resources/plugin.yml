@@ -1,5 +1,5 @@
-name: fancytrains
-version: '1.1'
+name: FancyTrains
+version: '1.2'
 main: me.bambam250.fancytrains.Fancytrains
 api-version: '1.21'
 
@@ -9,6 +9,11 @@ commands:
     usage: /station <list|create|remove|settrain|connect|disconnect|lines|addline>
     permission: fancytrains.admin
     aliases: [st, stations]
+  line:
+    description: Manage train lines
+    usage: /line <WIP>
+    permission: fancytrains.admin
+    aliases: [ln, lines]
 
 permissions:
   fancytrains.admin:

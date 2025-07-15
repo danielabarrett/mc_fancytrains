@@ -5,12 +5,14 @@ import me.bambam250.fancytrains.command.LineTabCompleter;
 import me.bambam250.fancytrains.command.StationCommand;
 import me.bambam250.fancytrains.command.StationTabCompleter;
 import me.bambam250.fancytrains.config.ConfigManager;
+import me.bambam250.fancytrains.station.StationGUIManager;
 import me.bambam250.fancytrains.station.StationManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public final class Fancytrains extends JavaPlugin {
     public ConfigManager configManager;
     public StationManager stationManager;
+    public StationGUIManager GUIManager;
 
     @Override
     public void onEnable() {
@@ -21,6 +23,7 @@ public final class Fancytrains extends JavaPlugin {
 
         configManager = new ConfigManager(this);
         stationManager = new StationManager(this);
+        GUIManager = new StationGUIManager(this);
 
         // Register Command Classes
         getCommand("station").setExecutor(new StationCommand(this));

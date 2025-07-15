@@ -2,7 +2,6 @@ package me.bambam250.fancytrains.station;
 
 import me.bambam250.fancytrains.Fancytrains;
 import org.bukkit.*;
-import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
@@ -22,7 +21,6 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.*;
-import java.util.logging.Level;
 
 public class StationManager implements Listener {
     private final Fancytrains plugin;
@@ -87,21 +85,6 @@ public class StationManager implements Listener {
      * @param stationName The name of the station where the NPC should be spawned.
      */
     public void spawnStationNPC(String stationName) {
-//        ConfigurationSection stationSection = ftConfig.getConfigurationSection("stations." + stationName);
-//        if (stationSection == null) return;
-//        String worldName = stationSection.getString("world");
-//        double x = stationSection.getDouble("x");
-//        double y = stationSection.getDouble("y");
-//        double z = stationSection.getDouble("z");
-//        World world = Bukkit.getWorld(worldName);
-//        if (world == null) return;
-//        Location loc = new Location(world, x, y, z);
-//
-//        Villager villager = (Villager) world.spawnEntity(loc, EntityType.VILLAGER);
-//        villager.setSilent(true);
-//
-//        ftConfig.set("stations." + stationName + ".npc-spawned", true);
-//        plugin.configManager.saveStations();
         String worldName = ftConfig.getString("stations." + stationName + ".world");
         double x = ftConfig.getDouble("stations." + stationName + ".x");
         double y = ftConfig.getDouble("stations." + stationName + ".y");
@@ -174,12 +157,6 @@ public class StationManager implements Listener {
      */
     @EventHandler
     public void onPlayerInteractEntity(PlayerInteractEntityEvent event) {
-//        if (!(event.getRightClicked() instanceof Villager villager)) return;
-//        if (!ChatColor.stripColor(villager.getCustomName()).equalsIgnoreCase("Station Master")) return;
-//        String stationName = findStationByNPCLocation(villager.getLocation());
-//        if (stationName == null) return;
-//        openStationMenu(event.getPlayer(), stationName);
-//        event.setCancelled(true);
         if (!(event.getRightClicked() instanceof Villager)) return;
 
         Villager villager = (Villager) event.getRightClicked();
@@ -194,7 +171,7 @@ public class StationManager implements Listener {
             return;
         }
 
-        openStationMenu(event.getPlayer(), npcStation);
+        plugin.GUIManager.openStationMenu(event.getPlayer(), npcStation);
     }
 
     /**
@@ -203,21 +180,6 @@ public class StationManager implements Listener {
      * @return The station name if found, otherwise null.
      */
     public String findStationByNPCLocation(Location npcLoc) {
-//        for (String stationName : ftConfig.getConfigurationSection("stations").getKeys(false)) {
-//            ConfigurationSection section = ftConfig.getConfigurationSection("stations." + stationName);
-//            if (section == null) continue;
-//            String worldName = section.getString("world");
-//            double x = section.getDouble("x");
-//            double y = section.getDouble("y");
-//            double z = section.getDouble("z");
-//            if (npcLoc.getWorld().getName().equals(worldName)
-//                    && Math.abs(npcLoc.getX() - x) < 0.5
-//                    && Math.abs(npcLoc.getY() - y) < 0.5
-//                    && Math.abs(npcLoc.getZ() - z) < 0.5) {
-//                return stationName;
-//            }
-//        }
-//        return null;
         for (String stationName : ftConfig.getConfigurationSection("stations").getKeys(false)) {
             String worldName = ftConfig.getString("stations." + stationName + ".world");
             double x = ftConfig.getDouble("stations." + stationName + ".x");
@@ -237,35 +199,35 @@ public class StationManager implements Listener {
      * @param player The player to open the menu for.
      * @param currentStation The current station's name.
      */
-    public void openStationMenu(Player player, String currentStation) {
-        Set<String> connections = stationConnections.get(currentStation);
-        if (connections == null || connections.isEmpty()) {
-            player.sendMessage(ChatColor.RED + "This station has no connections!");
-            return;
-        }
-
-        String currentLine = ftConfig.getString("stations." + currentStation + ".line");
-
-        // Check if there are international connections
-        boolean hasInternational = false;
-        boolean hasDomestic = false;
-
-        for (String connectedStation : connections) {
-            String connectedLine = ftConfig.getString("stations." + connectedStation + ".line");
-            if (connectedLine.equals(currentLine)) {
-                hasDomestic = true;
-            } else {
-                hasInternational = true;
-            }
-        }
-
-        if (hasInternational && hasDomestic) {
-            // Show domestic/international choice menu
-            openTravelTypeMenu(player, currentStation);
-        } else {
-            // Show direct destination menu
-            openDestinationMenu(player, currentStation, hasInternational ? "international" : "domestic");
-        }
+    public void OLDopenStationMenu(Player player, String currentStation) {
+//        Set<String> connections = stationConnections.get(currentStation);
+//        if (connections == null || connections.isEmpty()) {
+//            player.sendMessage(ChatColor.RED + "This station has no connections!");
+//            return;
+//        }
+//
+//        String currentLine = ftConfig.getString("stations." + currentStation + ".line");
+//
+//        // Check if there are international connections
+//        boolean hasInternational = false;
+//        boolean hasDomestic = false;
+//
+//        for (String connectedStation : connections) {
+//            String connectedLine = ftConfig.getString("stations." + connectedStation + ".line");
+//            if (connectedLine.equals(currentLine)) {
+//                hasDomestic = true;
+//            } else {
+//                hasInternational = true;
+//            }
+//        }
+//
+//        if (hasInternational && hasDomestic) {
+//            // Show domestic/international choice menu
+//            openTravelTypeMenu(player, currentStation);
+//        } else {
+//            // Show direct destination menu
+//            openDestinationMenu(player, currentStation, hasInternational ? "international" : "domestic");
+//        }
     }
 
     /**
@@ -273,29 +235,29 @@ public class StationManager implements Listener {
      * @param player The player to open the menu for.
      * @param currentStation The current station's name.
      */
-    public void openTravelTypeMenu(Player player, String currentStation) {
-        Inventory inv = Bukkit.createInventory(null, 9, ChatColor.DARK_BLUE + "Travel Type - " +
-                ftConfig.getString("stations." + currentStation + ".display-name"));
-
-        // Domestic travel option
-        ItemStack domestic = new ItemStack(Material.EMERALD);
-        ItemMeta domesticMeta = domestic.getItemMeta();
-        domesticMeta.setDisplayName(ChatColor.GREEN + "Domestic Travel");
-        String currentLine = ftConfig.getString("stations." + currentStation + ".line");
-        String lineDisplayName = ftConfig.getString("lines." + currentLine + ".display-name");
-        domesticMeta.setLore(Arrays.asList(ChatColor.GRAY + "Travel within " + lineDisplayName));
-        domestic.setItemMeta(domesticMeta);
-        inv.setItem(3, domestic);
-
-        // International travel option
-        ItemStack international = new ItemStack(Material.DIAMOND);
-        ItemMeta internationalMeta = international.getItemMeta();
-        internationalMeta.setDisplayName(ChatColor.BLUE + "International Travel");
-        internationalMeta.setLore(Arrays.asList(ChatColor.GRAY + "Travel to other nations"));
-        international.setItemMeta(internationalMeta);
-        inv.setItem(5, international);
-
-        player.openInventory(inv);
+    public void OLDopenTravelTypeMenu(Player player, String currentStation) {
+//        Inventory inv = Bukkit.createInventory(null, 9, ChatColor.DARK_BLUE + "Travel Type - " +
+//                ftConfig.getString("stations." + currentStation + ".display-name"));
+//
+//        // Domestic travel option
+//        ItemStack domestic = new ItemStack(Material.EMERALD);
+//        ItemMeta domesticMeta = domestic.getItemMeta();
+//        domesticMeta.setDisplayName(ChatColor.GREEN + "Domestic Travel");
+//        String currentLine = ftConfig.getString("stations." + currentStation + ".line");
+//        String lineDisplayName = ftConfig.getString("lines." + currentLine + ".display-name");
+//        domesticMeta.setLore(Arrays.asList(ChatColor.GRAY + "Travel within " + lineDisplayName));
+//        domestic.setItemMeta(domesticMeta);
+//        inv.setItem(3, domestic);
+//
+//        // International travel option
+//        ItemStack international = new ItemStack(Material.DIAMOND);
+//        ItemMeta internationalMeta = international.getItemMeta();
+//        internationalMeta.setDisplayName(ChatColor.BLUE + "International Travel");
+//        internationalMeta.setLore(Arrays.asList(ChatColor.GRAY + "Travel to other nations"));
+//        international.setItemMeta(internationalMeta);
+//        inv.setItem(5, international);
+//
+//        player.openInventory(inv);
     }
 
     /**
@@ -304,95 +266,95 @@ public class StationManager implements Listener {
      * @param currentStation The current station's name.
      * @param travelType The type of travel ("domestic" or "international").
      */
-    public void openDestinationMenu(Player player, String currentStation, String travelType) {
-        Set<String> connections = stationConnections.get(currentStation);
-        String currentLine = ftConfig.getString("stations." + currentStation + ".line");
-
-        // Filter connections based on travel type
-        Set<String> filteredConnections = new HashSet<>();
-        for (String connectedStation : connections) {
-            String connectedLine = ftConfig.getString("stations." + connectedStation + ".line");
-            if (travelType.equals("domestic") && connectedLine.equals(currentLine)) {
-                filteredConnections.add(connectedStation);
-            } else if (travelType.equals("international") && !connectedLine.equals(currentLine)) {
-                filteredConnections.add(connectedStation);
-            }
-        }
-
-        if (filteredConnections.isEmpty()) {
-            player.sendMessage(ChatColor.RED + "No " + travelType + " connections available!");
-            return;
-        }
-
-        int size = Math.min(54, ((filteredConnections.size() + 8) / 9) * 9);
-        String menuTitle = travelType.equals("domestic") ? "Domestic Destinations" : "International Destinations";
-        Inventory inv = Bukkit.createInventory(null, size, ChatColor.DARK_BLUE + menuTitle);
-
-        // Get current line train location for travel time calculation
-        Location currentLoc = trainLocations.get(currentLine);
-        if (currentLoc == null) {
-            // fallback to station location if train location not set
-            String worldName = ftConfig.getString("stations." + currentStation + ".world");
-            double x = ftConfig.getDouble("stations." + currentStation + ".x");
-            double y = ftConfig.getDouble("stations." + currentStation + ".y");
-            double z = ftConfig.getDouble("stations." + currentStation + ".z");
-            World world = Bukkit.getWorld(worldName);
-            if (world != null) {
-                currentLoc = new Location(world, x, y, z);
-            }
-        }
-
-        int slot = 0;
-        for (String stationName : filteredConnections) {
-            String trainLine = ftConfig.getString("stations." + stationName + ".line");
-            String lineDisplayName = ftConfig.getString("lines." + trainLine + ".display-name");
-            ChatColor lineColor = ChatColor.valueOf(ftConfig.getString("lines." + trainLine + ".color"));
-
-            ItemStack item;
-            if (travelType.equals("domestic")) {
-                item = new ItemStack(Material.RAIL);
-            } else {
-                String lineName = ftConfig.getString("stations." + stationName + ".line");
-                item = loadBannerFromConfig("lines." + lineName + ".flag");
-            }
-            ItemMeta meta = item.getItemMeta();
-
-            String displayName = ftConfig.getString("stations." + stationName + ".display-name");
-
-            // Calculate travel time
-            Location destLoc = trainLocations.get(trainLine);
-            if (destLoc == null) {
-                String worldName = ftConfig.getString("stations." + stationName + ".world");
-                double x = ftConfig.getDouble("stations." + stationName + ".x");
-                double y = ftConfig.getDouble("stations." + stationName + ".y");
-                double z = ftConfig.getDouble("stations." + stationName + ".z");
-                World world = Bukkit.getWorld(worldName);
-                if (world != null) {
-                    destLoc = new Location(world, x, y, z);
-                }
-            }
-            String travelTimeStr = "";
-            if (currentLoc != null && destLoc != null && currentLoc.getWorld().equals(destLoc.getWorld())) {
-                int travelTimeTicks = (int) currentLoc.distance(destLoc);
-                String formattedTime = Fancytrains.formatTime(travelTimeTicks);
-                travelTimeStr = ChatColor.AQUA + "Travel Time: " + formattedTime + "s";
-            }
-
-            List<String> lore = new ArrayList<>();
-            lore.add(ChatColor.GRAY + "Click to travel to " + displayName);
-            lore.add(lineColor + "Line: " + lineDisplayName);
-            if (!travelTimeStr.isEmpty()) {
-                lore.add(travelTimeStr);
-            }
-
-            meta.setDisplayName(ChatColor.YELLOW + displayName);
-            meta.setLore(lore);
-
-            item.setItemMeta(meta);
-            inv.setItem(slot++, item);
-        }
-
-        player.openInventory(inv);
+    public void OLDopenDestinationMenu(Player player, String currentStation, String travelType) {
+//        Set<String> connections = stationConnections.get(currentStation);
+//        String currentLine = ftConfig.getString("stations." + currentStation + ".line");
+//
+//        // Filter connections based on travel type
+//        Set<String> filteredConnections = new HashSet<>();
+//        for (String connectedStation : connections) {
+//            String connectedLine = ftConfig.getString("stations." + connectedStation + ".line");
+//            if (travelType.equals("domestic") && connectedLine.equals(currentLine)) {
+//                filteredConnections.add(connectedStation);
+//            } else if (travelType.equals("international") && !connectedLine.equals(currentLine)) {
+//                filteredConnections.add(connectedStation);
+//            }
+//        }
+//
+//        if (filteredConnections.isEmpty()) {
+//            player.sendMessage(ChatColor.RED + "No " + travelType + " connections available!");
+//            return;
+//        }
+//
+//        int size = Math.min(54, ((filteredConnections.size() + 8) / 9) * 9);
+//        String menuTitle = travelType.equals("domestic") ? "Domestic Destinations" : "International Destinations";
+//        Inventory inv = Bukkit.createInventory(null, size, ChatColor.DARK_BLUE + menuTitle);
+//
+//        // Get current line train location for travel time calculation
+//        Location currentLoc = trainLocations.get(currentLine);
+//        if (currentLoc == null) {
+//            // fallback to station location if train location not set
+//            String worldName = ftConfig.getString("stations." + currentStation + ".world");
+//            double x = ftConfig.getDouble("stations." + currentStation + ".x");
+//            double y = ftConfig.getDouble("stations." + currentStation + ".y");
+//            double z = ftConfig.getDouble("stations." + currentStation + ".z");
+//            World world = Bukkit.getWorld(worldName);
+//            if (world != null) {
+//                currentLoc = new Location(world, x, y, z);
+//            }
+//        }
+//
+//        int slot = 0;
+//        for (String stationName : filteredConnections) {
+//            String trainLine = ftConfig.getString("stations." + stationName + ".line");
+//            String lineDisplayName = ftConfig.getString("lines." + trainLine + ".display-name");
+//            ChatColor lineColor = ChatColor.valueOf(ftConfig.getString("lines." + trainLine + ".color"));
+//
+//            ItemStack item;
+//            if (travelType.equals("domestic")) {
+//                item = new ItemStack(Material.RAIL);
+//            } else {
+//                String lineName = ftConfig.getString("stations." + stationName + ".line");
+//                item = loadBannerFromConfig("lines." + lineName + ".flag");
+//            }
+//            ItemMeta meta = item.getItemMeta();
+//
+//            String displayName = ftConfig.getString("stations." + stationName + ".display-name");
+//
+//            // Calculate travel time
+//            Location destLoc = trainLocations.get(trainLine);
+//            if (destLoc == null) {
+//                String worldName = ftConfig.getString("stations." + stationName + ".world");
+//                double x = ftConfig.getDouble("stations." + stationName + ".x");
+//                double y = ftConfig.getDouble("stations." + stationName + ".y");
+//                double z = ftConfig.getDouble("stations." + stationName + ".z");
+//                World world = Bukkit.getWorld(worldName);
+//                if (world != null) {
+//                    destLoc = new Location(world, x, y, z);
+//                }
+//            }
+//            String travelTimeStr = "";
+//            if (currentLoc != null && destLoc != null && currentLoc.getWorld().equals(destLoc.getWorld())) {
+//                int travelTimeTicks = (int) currentLoc.distance(destLoc);
+//                String formattedTime = Fancytrains.formatTime(travelTimeTicks);
+//                travelTimeStr = ChatColor.AQUA + "Travel Time: " + formattedTime + "s";
+//            }
+//
+//            List<String> lore = new ArrayList<>();
+//            lore.add(ChatColor.GRAY + "Click to travel to " + displayName);
+//            lore.add(lineColor + "Line: " + lineDisplayName);
+//            if (!travelTimeStr.isEmpty()) {
+//                lore.add(travelTimeStr);
+//            }
+//
+//            meta.setDisplayName(ChatColor.YELLOW + displayName);
+//            meta.setLore(lore);
+//
+//            item.setItemMeta(meta);
+//            inv.setItem(slot++, item);
+//        }
+//
+//        player.openInventory(inv);
     }
 
     /**
@@ -402,38 +364,38 @@ public class StationManager implements Listener {
      * @param travelType The type of travel ("domestic" or "international").
      * @param travelTimeSeconds The travel time in seconds.
      */
-    public void openTravelConfirmMenu(Player player, String destinationStation, String travelType, int travelTimeSeconds) {
-        String displayName = ftConfig.getString("stations." + destinationStation + ".display-name");
-        String menuTitle = ChatColor.DARK_GREEN + "Confirm Travel";
-        Inventory inv = Bukkit.createInventory(null, 9, menuTitle);
-
-        // Confirm item
-        ItemStack confirm = new ItemStack(Material.LIME_CONCRETE);
-        ItemMeta confirmMeta = confirm.getItemMeta();
-        confirmMeta.setDisplayName(ChatColor.GREEN + "Confirm Travel");
-        List<String> confirmLore = new ArrayList<>();
-        confirmLore.add(ChatColor.YELLOW + "Destination: " + displayName);
-        confirmLore.add(ChatColor.AQUA + "Travel Time: " + travelTimeSeconds + "s");
-        confirmMeta.setLore(confirmLore);
-        confirm.setItemMeta(confirmMeta);
-        inv.setItem(3, confirm);
-
-        // Cancel item
-        ItemStack cancel = new ItemStack(Material.RED_CONCRETE);
-        ItemMeta cancelMeta = cancel.getItemMeta();
-        cancelMeta.setDisplayName(ChatColor.RED + "Cancel");
-        cancel.setItemMeta(cancelMeta);
-        inv.setItem(5, cancel);
-
-        player.openInventory(inv);
-
-        // Store pending travel info in metadata or a map if needed
-        // For simplicity, you can use a map in StationManager:
-        pendingTravel.put(player.getUniqueId(), new PendingTravel(destinationStation, travelType, travelTimeSeconds));
+    public void OLDopenTravelConfirmMenu(Player player, String destinationStation, String travelType, int travelTimeSeconds) {
+//        String displayName = ftConfig.getString("stations." + destinationStation + ".display-name");
+//        String menuTitle = ChatColor.DARK_GREEN + "Confirm Travel";
+//        Inventory inv = Bukkit.createInventory(null, 9, menuTitle);
+//
+//        // Confirm item
+//        ItemStack confirm = new ItemStack(Material.LIME_CONCRETE);
+//        ItemMeta confirmMeta = confirm.getItemMeta();
+//        confirmMeta.setDisplayName(ChatColor.GREEN + "Confirm Travel");
+//        List<String> confirmLore = new ArrayList<>();
+//        confirmLore.add(ChatColor.YELLOW + "Destination: " + displayName);
+//        confirmLore.add(ChatColor.AQUA + "Travel Time: " + travelTimeSeconds + "s");
+//        confirmMeta.setLore(confirmLore);
+//        confirm.setItemMeta(confirmMeta);
+//        inv.setItem(3, confirm);
+//
+//        // Cancel item
+//        ItemStack cancel = new ItemStack(Material.RED_CONCRETE);
+//        ItemMeta cancelMeta = cancel.getItemMeta();
+//        cancelMeta.setDisplayName(ChatColor.RED + "Cancel");
+//        cancel.setItemMeta(cancelMeta);
+//        inv.setItem(5, cancel);
+//
+//        player.openInventory(inv);
+//
+//        // Store pending travel info in metadata or a map if needed
+//        // For simplicity, you can use a map in StationManager:
+//        pendingTravel.put(player.getUniqueId(), new PendingTravel(destinationStation, travelType, travelTimeSeconds));
     }
 
     // Helper class to track pending travel confirmations
-    private static class PendingTravel {
+    public static class PendingTravel {
         public final String destinationStation;
         public final String travelType;
         public final int travelTimeSeconds;
@@ -474,10 +436,10 @@ public class StationManager implements Listener {
 
             if (event.getCurrentItem().getType() == Material.EMERALD) {
                 player.closeInventory();
-                openDestinationMenu(player, stationName, "domestic");
+                plugin.GUIManager.openDestinationMenu(player, stationName, "domestic");
             } else if (event.getCurrentItem().getType() == Material.DIAMOND) {
                 player.closeInventory();
-                openDestinationMenu(player, stationName, "international");
+                plugin.GUIManager.openDestinationMenu(player, stationName, "international");
             }
             return;
         }
@@ -533,7 +495,7 @@ public class StationManager implements Listener {
             }
 
             // Open confirmation GUI
-            openTravelConfirmMenu(player, stationName, travelType, travelTimeSeconds);
+            plugin.GUIManager.openTravelConfirmMenu(player, stationName, travelType, travelTimeSeconds);
             return;
         }
 
@@ -560,6 +522,10 @@ public class StationManager implements Listener {
             }
             return;
         }
+    }
+
+    public void addPendingTraveler(Player player, String destinationStation, String travelType, int travelTimeSeconds) {
+        pendingTravel.put(player.getUniqueId(), new PendingTravel(destinationStation, travelType, travelTimeSeconds));
     }
 
     // Overload to support custom travel time in ticks

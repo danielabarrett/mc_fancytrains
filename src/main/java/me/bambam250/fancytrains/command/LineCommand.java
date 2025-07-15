@@ -8,6 +8,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BannerMeta;
+import org.bukkit.Location;
 import org.jetbrains.annotations.NotNull;
 
 public class LineCommand implements CommandExecutor {
@@ -88,6 +89,22 @@ public class LineCommand implements CommandExecutor {
             }
             String value = valueBuilder.toString();
             modifyLine(player, lineName, attribute, value);
+            return true;
+        }
+
+        if (args[0].equalsIgnoreCase("settrain")) {
+            if (args.length < 2) {
+                player.sendMessage(ChatColor.RED + "Usage: /line settrain <line>");
+                return true;
+            }
+
+            String lineName = args[1].toLowerCase();
+            if (!plugin.configManager.ftConfig.contains("lines." + lineName)) {
+                player.sendMessage(ChatColor.RED + "Line does not exist!");
+                return true;
+            }
+
+            setTrainLocation(player, lineName);
             return true;
         }
 
@@ -185,6 +202,21 @@ public class LineCommand implements CommandExecutor {
             default:
                 player.sendMessage(ChatColor.RED + "Unknown attribute. Supported: display-name, color");
         }
+    }
+
+    // Now set train location for a line, not a station
+    private void setTrainLocation(Player player, String lineName) {
+        Location loc = player.getLocation();
+
+        plugin.configManager.ftConfig.set("lines." + lineName + ".train-location.world", loc.getWorld().getName());
+        plugin.configManager.ftConfig.set("lines." + lineName + ".train-location.x", loc.getX());
+        plugin.configManager.ftConfig.set("lines." + lineName + ".train-location.y", loc.getY());
+        plugin.configManager.ftConfig.set("lines." + lineName + ".train-location.z", loc.getZ());
+
+        plugin.stationManager.trainLocations.put(lineName, loc);
+        plugin.configManager.saveStations();
+
+        player.sendMessage(ChatColor.GREEN + "Train location set for line " + lineName + "!");
     }
 
 }

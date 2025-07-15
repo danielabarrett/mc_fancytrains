@@ -12,7 +12,7 @@ import java.util.List;
 
 public class StationTabCompleter implements TabCompleter {
     private static final List<String> SUBCOMMANDS = Arrays.asList(
-            "list", "create", "remove", "settrain", "connect", "disconnect"
+            "list", "create", "remove", "connect", "disconnect"
     );
 
     @Override
@@ -32,9 +32,6 @@ public class StationTabCompleter implements TabCompleter {
                     completions.add("<station_name> <line> <display-name>");
                     break;
                 case "remove":
-                    completions.add("<station_name>");
-                    break;
-                case "settrain":
                     completions.add("<station_name>");
                     break;
                 case "connect":
@@ -76,7 +73,7 @@ public class StationTabCompleter implements TabCompleter {
         // Tab complete station names for relevant subcommands
         if (args.length == 2) {
             String sub = args[0].toLowerCase();
-            if (sub.equals("remove") || sub.equals("settrain")) {
+            if (sub.equals("remove")) {
                 me.bambam250.fancytrains.Fancytrains plugin = me.bambam250.fancytrains.Fancytrains.getPlugin(me.bambam250.fancytrains.Fancytrains.class);
                 if (plugin.configManager.ftConfig.getConfigurationSection("stations") != null) {
                     for (String station : plugin.configManager.ftConfig.getConfigurationSection("stations").getKeys(false)) {

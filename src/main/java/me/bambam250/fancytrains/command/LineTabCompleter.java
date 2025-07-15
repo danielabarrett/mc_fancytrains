@@ -12,7 +12,7 @@ import java.util.*;
 
 public class LineTabCompleter implements TabCompleter {
     private static final List<String> SUBCOMMANDS = Arrays.asList(
-            "list", "create", "remove", "setflag", "modify"
+            "list", "create", "remove", "setflag", "modify", "settrain"
     );
 
     @Override
@@ -40,6 +40,9 @@ public class LineTabCompleter implements TabCompleter {
                     break;
                 case "modify":
                     completions.add("<line> <attribute> <value>");
+                    break;
+                case "settrain":
+                    completions.add("<line>");
                     break;
             }
             return completions;
@@ -70,7 +73,7 @@ public class LineTabCompleter implements TabCompleter {
         // Tab complete line names for relevant subcommands
         if (args.length == 2) {
             String sub = args[0].toLowerCase();
-            if (sub.equals("remove") || sub.equals("setflag") || sub.equals("modify")) {
+            if (sub.equals("remove") || sub.equals("setflag") || sub.equals("modify") || sub.equals("settrain")) {
                 if (plugin.configManager.ftConfig.getConfigurationSection("lines") != null) {
                     for (String line : plugin.configManager.ftConfig.getConfigurationSection("lines").getKeys(false)) {
                         if (line.toLowerCase().startsWith(args[1].toLowerCase())) {

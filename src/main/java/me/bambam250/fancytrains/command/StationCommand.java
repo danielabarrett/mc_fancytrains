@@ -28,15 +28,12 @@ public class StationCommand implements CommandExecutor {
             return true;
         }
 
-//        Player player = (Player) sender;
-
         if (command.getName().equalsIgnoreCase("station")) {
             if (args.length == 0) {
                 player.sendMessage(ChatColor.YELLOW + "Train Station Commands:");
                 player.sendMessage(ChatColor.GREEN + "/station list" + ChatColor.GRAY + " - List all available stations");
                 player.sendMessage(ChatColor.GREEN + "/station create" + ChatColor.GRAY + " <name> <line> - Create a new station");
                 player.sendMessage(ChatColor.GREEN + "/station remove" + ChatColor.GRAY + " <name> - Remove a station");
-                player.sendMessage(ChatColor.GREEN + "/station settrain" + ChatColor.GRAY + " <name> - Set train location for station");
                 player.sendMessage(ChatColor.GREEN + "/station connect" + ChatColor.GRAY + " <station1> <station2> - Connect two stations together");
                 player.sendMessage(ChatColor.GREEN + "/station disconnect" + ChatColor.GRAY + " <station1> <station2> - Disconnect two stations");
                 return true;
@@ -104,22 +101,6 @@ public class StationCommand implements CommandExecutor {
                 return true;
             }
 
-            if (args[0].equalsIgnoreCase("settrain")) {
-                if (args.length < 2) {
-                    player.sendMessage(ChatColor.RED + "Usage: /station settrain <station name>");
-                    return true;
-                }
-
-                String stationName = args[1].toLowerCase();
-                if (!plugin.configManager.ftConfig.contains("stations." + stationName)) {
-                    player.sendMessage(ChatColor.RED + "Station does not exist!");
-                    return true;
-                }
-
-                setTrainLocation(player, stationName);
-                return true;
-            }
-
             if (args[0].equalsIgnoreCase("connect")) {
                 if (args.length < 3) {
                     player.sendMessage(ChatColor.RED + "Usage: /station connect <station1> <station2>");
@@ -173,14 +154,8 @@ public class StationCommand implements CommandExecutor {
         plugin.configManager.ftConfig.set("stations." + stationName + ".npc-spawned", false);
         plugin.configManager.ftConfig.set("stations." + stationName + ".connections", Arrays.asList());
 
-        // Set default train location (5 blocks away)
-        Location trainLoc = loc.clone().add(5, 0, 0);
-        plugin.configManager.ftConfig.set("train-locations." + stationName + ".world", trainLoc.getWorld().getName());
-        plugin.configManager.ftConfig.set("train-locations." + stationName + ".x", trainLoc.getX());
-        plugin.configManager.ftConfig.set("train-locations." + stationName + ".y", trainLoc.getY());
-        plugin.configManager.ftConfig.set("train-locations." + stationName + ".z", trainLoc.getZ());
+        // No longer set train location per station
 
-        plugin.stationManager.trainLocations.put(stationName, trainLoc);
         plugin.stationManager.stationConnections.put(stationName, new HashSet<>());
         plugin.configManager.saveStations();
 
@@ -206,8 +181,9 @@ public class StationCommand implements CommandExecutor {
         plugin.stationManager.spawnStationNPC(stationName);
 
         String lineDisplayName = plugin.configManager.ftConfig.getString("lines." + trainLine + ".display-name");
-        player.sendMessage(ChatColor.GREEN + "Station created on " + lineDisplayName + " line! Use /station settrain " + stationName + " to customize train location.");
+        player.sendMessage(ChatColor.GREEN + "Station created on " + lineDisplayName + " line! Use /station settrain " + trainLine + " to customize train location for this line.");
     }
+
 
     private void removeStation(String stationName) {
         // Remove the NPC associated with the station
@@ -279,19 +255,6 @@ public class StationCommand implements CommandExecutor {
         }
     }
 
-    private void setTrainLocation(Player player, String stationName) {
-        Location loc = player.getLocation();
-
-        plugin.configManager.ftConfig.set("train-locations." + stationName + ".world", loc.getWorld().getName());
-        plugin.configManager.ftConfig.set("train-locations." + stationName + ".x", loc.getX());
-        plugin.configManager.ftConfig.set("train-locations." + stationName + ".y", loc.getY());
-        plugin.configManager.ftConfig.set("train-locations." + stationName + ".z", loc.getZ());
-
-        plugin.stationManager.trainLocations.put(stationName, loc);
-        plugin.configManager.saveStations();
-
-        player.sendMessage(ChatColor.GREEN + "Train location set for " + formatStationName(stationName) + "!");
-    }
 
     private void connectStations(Player player, String station1, String station2) {
         if (!plugin.configManager.ftConfig.contains("stations." + station1)) {

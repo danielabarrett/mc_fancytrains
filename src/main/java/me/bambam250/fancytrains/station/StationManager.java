@@ -50,27 +50,31 @@ public class StationManager implements Listener {
      * Loads stations and train locations from the configuration file into memory.
      */
     public void loadStations() {
-        if (ftConfig.getConfigurationSection("train-locations") != null) {
-            for (String stationName : ftConfig.getConfigurationSection("train-locations").getKeys(false)) {
-                String worldName = ftConfig.getString("train-locations." + stationName + ".world");
-                double x = ftConfig.getDouble("train-locations." + stationName + ".x");
-                double y = ftConfig.getDouble("train-locations." + stationName + ".y");
-                double z = ftConfig.getDouble("train-locations." + stationName + ".z");
+        trainLocations.clear();
+        stationConnections.clear();
 
-                World world = Bukkit.getWorld(worldName);
-                if (world != null) {
-                    trainLocations.put(stationName, new Location(world, x, y, z));
+        // Load train locations per line
+        if (ftConfig.getConfigurationSection("lines") != null) {
+            for (String lineName : ftConfig.getConfigurationSection("lines").getKeys(false)) {
+                String path = "lines." + lineName + ".train-location";
+                if (ftConfig.contains(path + ".world")) {
+                    String worldName = ftConfig.getString(path + ".world");
+                    double x = ftConfig.getDouble(path + ".x");
+                    double y = ftConfig.getDouble(path + ".y");
+                    double z = ftConfig.getDouble(path + ".z");
+                    World world = Bukkit.getWorld(worldName);
+                    if (world != null) {
+                        trainLocations.put(lineName, new Location(world, x, y, z));
+                    }
                 }
-
-//                Bukkit.getLogger().log(Level.INFO,  "Loading connections for " + stationName);
-                List<String> connections = ftConfig.getStringList("stations." + stationName + ".connections");
-                stationConnections.put(stationName, new HashSet<>(connections));
             }
         }
 
-        // Spawn NPCs for existing stations
+        // Load connections and spawn NPCs for existing stations
         if (ftConfig.getConfigurationSection("stations") != null) {
             for (String stationName : ftConfig.getConfigurationSection("stations").getKeys(false)) {
+                List<String> connections = ftConfig.getStringList("stations." + stationName + ".connections");
+                stationConnections.put(stationName, new HashSet<>(connections));
                 if (!ftConfig.getBoolean("stations." + stationName + ".npc-spawned", false)) {
                     spawnStationNPC(stationName);
                 }
@@ -324,8 +328,8 @@ public class StationManager implements Listener {
         String menuTitle = travelType.equals("domestic") ? "Domestic Destinations" : "International Destinations";
         Inventory inv = Bukkit.createInventory(null, size, ChatColor.DARK_BLUE + menuTitle);
 
-        // Get current station location for travel time calculation
-        Location currentLoc = trainLocations.get(currentStation);
+        // Get current line train location for travel time calculation
+        Location currentLoc = trainLocations.get(currentLine);
         if (currentLoc == null) {
             // fallback to station location if train location not set
             String worldName = ftConfig.getString("stations." + currentStation + ".world");
@@ -356,7 +360,7 @@ public class StationManager implements Listener {
             String displayName = ftConfig.getString("stations." + stationName + ".display-name");
 
             // Calculate travel time
-            Location destLoc = trainLocations.get(stationName);
+            Location destLoc = trainLocations.get(trainLine);
             if (destLoc == null) {
                 String worldName = ftConfig.getString("stations." + stationName + ".world");
                 double x = ftConfig.getDouble("stations." + stationName + ".x");
@@ -565,17 +569,17 @@ public class StationManager implements Listener {
             return;
         }
 
-        // Get train location for this station
-        Location trainLoc = trainLocations.get(destinationStation);
+        // Get line for this station
+        String lineName = ftConfig.getString("stations." + destinationStation + ".line");
+        Location trainLoc = trainLocations.get(lineName);
         if (trainLoc == null) {
-            player.sendMessage(ChatColor.RED + "Train location not set for this station!");
+            player.sendMessage(ChatColor.RED + "Train location not set for this line!");
             return;
         }
 
         travelingPlayers.put(player.getUniqueId(), destinationStation);
 
-        // Teleport to train location first
-        Location sourceLoc = player.getLocation();
+        // Teleport to train location for the line
         player.teleport(trainLoc);
 
         String destinationDisplayName = ftConfig.getString("stations." + destinationStation + ".display-name");

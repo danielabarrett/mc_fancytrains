@@ -25,7 +25,6 @@ public class ConfigManager {
                 ftFile.createNewFile();
                 ftConfig = YamlConfiguration.loadConfiguration(ftFile);
                 ftConfig.createSection("stations");
-                ftConfig.createSection("train-locations");
                 ftConfig.createSection("lines");
                 ftConfig.save(ftFile);
             } catch (IOException e) {

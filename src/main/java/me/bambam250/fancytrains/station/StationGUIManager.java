@@ -5,6 +5,7 @@ import org.bukkit.*;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
@@ -138,12 +139,10 @@ public class StationGUIManager {
             ChatColor lineColor = ChatColor.valueOf(ftConfig.getString("lines." + trainLine + ".color"));
 
             ItemStack item;
-            if (travelType.equals("domestic")) {
-                item = new ItemStack(Material.RAIL);
-            } else {
-                String lineName = ftConfig.getString("stations." + stationName + ".line");
-                item = stationManager.loadBannerFromConfig("lines." + lineName + ".flag");
-            }
+
+            String lineName = ftConfig.getString("stations." + stationName + ".line");
+            item = stationManager.loadBannerFromConfig("lines." + lineName + ".flag");
+
             ItemMeta meta = item.getItemMeta();
 
             String displayName = ftConfig.getString("stations." + stationName + ".display-name");
@@ -174,6 +173,7 @@ public class StationGUIManager {
                 lore.add(travelTimeStr);
             }
 
+            meta.addItemFlags(ItemFlag.HIDE_ADDITIONAL_TOOLTIP);
             meta.setDisplayName(ChatColor.YELLOW + displayName);
             meta.setLore(lore);
 

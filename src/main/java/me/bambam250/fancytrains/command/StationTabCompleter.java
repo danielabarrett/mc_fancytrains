@@ -1,23 +1,27 @@
 package me.bambam250.fancytrains.command;
 
+import me.bambam250.fancytrains.Fancytrains;
+import me.bambam250.fancytrains.objects.Line;
+import me.bambam250.fancytrains.objects.Station;
+import me.bambam250.fancytrains.station.StationManager;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 
 public class StationTabCompleter implements TabCompleter {
     private static final List<String> SUBCOMMANDS = Arrays.asList(
-            "list", "create", "remove", "connect", "disconnect"
+            "list", "create", "remove", "connect", "disconnect", "modify"
     );
 
     @Override
     public @Nullable List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String @NotNull [] args) {
         List<String> completions = new ArrayList<>();
+        Fancytrains plugin = Fancytrains.getPlugin(Fancytrains.class);
+        StationManager stationManager = plugin.stationManager;
 
         if (args.length == 1) {
             for (String sub : SUBCOMMANDS) {
@@ -41,6 +45,9 @@ public class StationTabCompleter implements TabCompleter {
                 case "list":
                     completions.add("[line]");
                     break;
+                case "modify":
+                    completions.add("<station> <attribute> [<value>]");
+                    break;
             }
             return completions;
         }
@@ -53,12 +60,9 @@ public class StationTabCompleter implements TabCompleter {
 
         // Prompt for line for /station create <name> <line>
         if (args.length == 3 && args[0].equalsIgnoreCase("create")) {
-            me.bambam250.fancytrains.Fancytrains plugin = me.bambam250.fancytrains.Fancytrains.getPlugin(me.bambam250.fancytrains.Fancytrains.class);
-            if (plugin.configManager.ftConfig.getConfigurationSection("lines") != null) {
-                for (String line : plugin.configManager.ftConfig.getConfigurationSection("lines").getKeys(false)) {
-                    if (line.toLowerCase().startsWith(args[2].toLowerCase())) {
-                        completions.add(line);
-                    }
+            for (Line line : stationManager.getLines()) {
+                if (line.getName().toLowerCase().startsWith(args[2].toLowerCase())) {
+                    completions.add(line.getName());
                 }
             }
             return completions;
@@ -74,24 +78,18 @@ public class StationTabCompleter implements TabCompleter {
         if (args.length == 2) {
             String sub = args[0].toLowerCase();
             if (sub.equals("remove")) {
-                me.bambam250.fancytrains.Fancytrains plugin = me.bambam250.fancytrains.Fancytrains.getPlugin(me.bambam250.fancytrains.Fancytrains.class);
-                if (plugin.configManager.ftConfig.getConfigurationSection("stations") != null) {
-                    for (String station : plugin.configManager.ftConfig.getConfigurationSection("stations").getKeys(false)) {
-                        if (station.toLowerCase().startsWith(args[1].toLowerCase())) {
-                            completions.add(station);
-                        }
+                for (Station station : stationManager.getStations()) {
+                    if (station.getName().toLowerCase().startsWith(args[1].toLowerCase())) {
+                        completions.add(station.getName());
                     }
                 }
                 return completions;
             }
             // Tab complete lines for "/station list <line>"
             if (sub.equals("list")) {
-                me.bambam250.fancytrains.Fancytrains plugin = me.bambam250.fancytrains.Fancytrains.getPlugin(me.bambam250.fancytrains.Fancytrains.class);
-                if (plugin.configManager.ftConfig.getConfigurationSection("lines") != null) {
-                    for (String line : plugin.configManager.ftConfig.getConfigurationSection("lines").getKeys(false)) {
-                        if (line.toLowerCase().startsWith(args[1].toLowerCase())) {
-                            completions.add(line);
-                        }
+                for (Line line : stationManager.getLines()) {
+                    if (line.getName().toLowerCase().startsWith(args[1].toLowerCase())) {
+                        completions.add(line.getName());
                     }
                 }
                 return completions;
@@ -102,19 +100,49 @@ public class StationTabCompleter implements TabCompleter {
         if (args.length == 2 || args.length == 3) {
             String sub = args[0].toLowerCase();
             if (sub.equals("connect") || sub.equals("disconnect")) {
-                me.bambam250.fancytrains.Fancytrains plugin = me.bambam250.fancytrains.Fancytrains.getPlugin(me.bambam250.fancytrains.Fancytrains.class);
-                if (plugin.configManager.ftConfig.getConfigurationSection("stations") != null) {
-                    for (String station : plugin.configManager.ftConfig.getConfigurationSection("stations").getKeys(false)) {
-                        if (args.length == 2 && station.toLowerCase().startsWith(args[1].toLowerCase())) {
-                            completions.add(station);
-                        } else if (args.length == 3 && station.toLowerCase().startsWith(args[2].toLowerCase())) {
-                            completions.add(station);
-                        }
+                for (Station station : stationManager.getStations()) {
+                    if (args.length == 2 && station.getName().toLowerCase().startsWith(args[1].toLowerCase())) {
+                        completions.add(station.getName());
+                    } else if (args.length == 3 && station.getName().toLowerCase().startsWith(args[2].toLowerCase())) {
+                        completions.add(station.getName());
                     }
                 }
                 return completions;
             }
         }
+
+        // Tab complete station names for /station modify <station> <attribute>
+        if (args.length == 2 && args[0].equalsIgnoreCase("modify")) {
+            for (Station station : stationManager.getStations()) {
+                if (station.getName().toLowerCase().startsWith(args[1].toLowerCase())) {
+                    completions.add(station.getName());
+                }
+            }
+            return completions;
+        }
+
+        // Tab complete attributes for /station modify <station> <attribute> [<value>]
+        if (args.length == 3 && args[0].equalsIgnoreCase("modify")) {
+            List<String> attributes = Arrays.asList("display-name", "line", "npc-location", "station-location");
+            for (String attr : attributes) {
+                if (attr.startsWith(args[2].toLowerCase())) {
+                    completions.add(attr);
+                }
+            }
+            return completions;
+        }
+
+        // Tab complete line names for /station modify <station> line <value>
+        if (args.length == 4 && args[0].equalsIgnoreCase("modify") && args[2].equalsIgnoreCase("line")) {
+            for (Line line : stationManager.getLines()) {
+                if (line.getName().toLowerCase().startsWith(args[3].toLowerCase())) {
+                    completions.add(line.getName());
+                }
+            }
+            return completions;
+        }
+
+        // No color completion for station modify anymore
 
         return completions;
     }

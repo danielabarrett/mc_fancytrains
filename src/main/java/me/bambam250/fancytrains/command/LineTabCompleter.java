@@ -1,6 +1,7 @@
 package me.bambam250.fancytrains.command;
 
 import me.bambam250.fancytrains.Fancytrains;
+import me.bambam250.fancytrains.objects.Line;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -19,6 +20,7 @@ public class LineTabCompleter implements TabCompleter {
     public @Nullable List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String @NotNull [] args) {
         List<String> completions = new ArrayList<>();
         Fancytrains plugin = Fancytrains.getPlugin(Fancytrains.class);
+        List<Line> lines = plugin.stationManager.getLines();
 
         if (args.length == 1) {
             for (String sub : SUBCOMMANDS) {
@@ -74,11 +76,9 @@ public class LineTabCompleter implements TabCompleter {
         if (args.length == 2) {
             String sub = args[0].toLowerCase();
             if (sub.equals("remove") || sub.equals("setflag") || sub.equals("modify") || sub.equals("settrain")) {
-                if (plugin.configManager.ftConfig.getConfigurationSection("lines") != null) {
-                    for (String line : plugin.configManager.ftConfig.getConfigurationSection("lines").getKeys(false)) {
-                        if (line.toLowerCase().startsWith(args[1].toLowerCase())) {
-                            completions.add(line);
-                        }
+                for (Line line : lines) {
+                    if (line.getName().toLowerCase().startsWith(args[1].toLowerCase())) {
+                        completions.add(line.getName());
                     }
                 }
                 return completions;

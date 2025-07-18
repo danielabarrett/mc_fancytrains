@@ -11,7 +11,7 @@ import java.util.logging.Level;
 public class ConfigManager {
     private final Fancytrains plugin;
     private File ftFile;
-    public FileConfiguration ftConfig;
+    private FileConfiguration ftConfig;
 
     public ConfigManager(Fancytrains plugin) {
         this.plugin = plugin;
@@ -41,5 +41,9 @@ public class ConfigManager {
         } catch (IOException e) {
             plugin.getLogger().log(Level.SEVERE, "Could not save stations.yml", e);
         }
+    }
+
+    public FileConfiguration getFtConfig() {
+        return ftConfig;
     }
 }

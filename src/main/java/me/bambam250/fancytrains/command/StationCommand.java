@@ -15,12 +15,9 @@ import org.jetbrains.annotations.NotNull;
 import java.util.*;
 
 public class StationCommand implements CommandExecutor {
-
-    private final Fancytrains plugin;
     private final StationManager stationManager;
 
     public StationCommand(Fancytrains pl) {
-        this.plugin = pl;
         this.stationManager = pl.stationManager;
     }
 
@@ -62,7 +59,6 @@ public class StationCommand implements CommandExecutor {
                     return true;
                 }
 
-                // Concatenate args[3] and onward into a displayName string
                 StringBuilder displayNameBuilder = new StringBuilder();
                 for (int i = 3; i < args.length; i++) {
                     if (i > 3) displayNameBuilder.append(" ");
@@ -82,8 +78,6 @@ public class StationCommand implements CommandExecutor {
                         other.addConnection(station);
                     }
                 }
-
-//                station.spawnStationMaster();
 
                 player.sendMessage(ChatColor.GREEN + "Station created on " + line.getDisplayName() + " line!");
                 return true;
@@ -263,7 +257,6 @@ public class StationCommand implements CommandExecutor {
                     return;
                 }
                 station.setDisplayName(value);
-                // Update station master name if loaded
                 if (station.getStationMaster() != null) {
                     station.getStationMaster().setCustomName(ChatColor.GOLD + "Station Master - " + station.getDisplayName() + " " + station.getLine().getColor() + "(" + station.getLine().getDisplayName() + ")");
                     player.sendMessage(ChatColor.GREEN + "Set display name for " + stationName + " to " + value);
@@ -282,7 +275,6 @@ public class StationCommand implements CommandExecutor {
                     return;
                 }
                 station.setLine(newLine);
-                // Update station master name if loaded
                 if (station.getStationMaster() != null) {
                     station.getStationMaster().setCustomName(ChatColor.GOLD + "Station Master - " + station.getDisplayName() + " " + station.getLine().getColor() + "(" + station.getLine().getDisplayName() + ")");
                     player.sendMessage(ChatColor.GREEN + "Set line for " + stationName + " to " + value);
@@ -291,7 +283,6 @@ public class StationCommand implements CommandExecutor {
                 }
                 break;
             case "npc-location":
-                // Only allow if NPC is loaded
                 if (station.getStationMaster() == null) {
                     player.sendMessage(ChatColor.RED + "Station master NPC is not loaded in the world. You must be near the NPC to move it.");
                     return;
@@ -303,7 +294,6 @@ public class StationCommand implements CommandExecutor {
                 }
                 break;
             case "station-location":
-                // Only allow if NPC is loaded
                 if (station.getStationMaster() == null) {
                     player.sendMessage(ChatColor.RED + "Station master NPC is not loaded in the world. You must be near the NPC to change the station location.");
                     return;

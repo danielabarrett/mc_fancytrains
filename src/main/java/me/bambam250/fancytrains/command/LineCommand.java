@@ -68,7 +68,6 @@ public class LineCommand implements CommandExecutor {
                 return true;
             }
 
-            // Concatenate args[3] and onward into a displayName string
             StringBuilder displayNameBuilder = new StringBuilder();
             for (int i = 3; i < args.length; i++) {
                 if (i > 3) displayNameBuilder.append(" ");

@@ -24,7 +24,6 @@ public final class Fancytrains extends JavaPlugin {
 
     @Override
     public void onEnable() {
-        // Create plugin folder
         if (!getDataFolder().exists()) {
             getDataFolder().mkdirs();
         }
@@ -33,13 +32,11 @@ public final class Fancytrains extends JavaPlugin {
         stationManager = new StationManager(this);
         GUIManager = new StationGUIManager(this);
 
-        // Register Command Classes
         getCommand("station").setExecutor(new StationCommand(this));
         getCommand("station").setTabCompleter(new StationTabCompleter());
         getCommand("line").setExecutor(new LineCommand(this));
         getCommand("line").setTabCompleter(new LineTabCompleter());
 
-        // Register events
         getServer().getPluginManager().registerEvents(stationManager, this);
 
         getLogger().info("FancyTrains Plugin enabled!");
@@ -51,14 +48,16 @@ public final class Fancytrains extends JavaPlugin {
         getLogger().info("FancyTrains Plugin disabled!");
     }
 
+    /**
+     * Formats a time in ticks to a mm:ss or ss string.
+     *
+     * @param ticks The time in ticks.
+     * @return The formatted time string.
+     */
     public static String formatTime(int ticks) {
         int seconds = ticks / 20;
         int minutes = seconds / 60;
         seconds %= 60;
         return minutes > 0 ? String.format("%02d:%02d", minutes, seconds) : String.format("%02d", seconds);
     }
-
-
-
-
 }

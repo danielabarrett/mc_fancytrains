@@ -20,16 +20,18 @@ import javax.annotation.Nullable;
 import java.util.*;
 import java.util.logging.Level;
 
+/**
+ * Manages stations and lines, including event handling and in-memory storage.
+ */
 public class StationManager implements Listener {
     private final Fancytrains plugin;
 
     private final List<Station> stations = new ArrayList<>();
     private final List<Line> lines = new ArrayList<>();
 
-    // Track spawned NPCs by station name for easy removal
-    private final Map<String, UUID> stationNPCs = new HashMap<>();
-
-    // Helper class to track pending travel confirmations
+    /**
+     * Helper class to track pending travel confirmations.
+     */
     public static class PendingTravel {
         public final String destinationStation;
         public final String travelType;
@@ -132,10 +134,24 @@ public class StationManager implements Listener {
         plugin.GUIManager.handleInventoryClick(event, player, title, this);
     }
 
+    /**
+     * Adds a pending traveler for confirmation.
+     * @param player The player.
+     * @param destinationStation The destination station.
+     * @param travelType The type of travel.
+     * @param travelTimeSeconds The travel time in seconds.
+     */
     public void addPendingTraveler(Player player, String destinationStation, String travelType, int travelTimeSeconds) {
         pendingTravel.put(player.getUniqueId(), new PendingTravel(destinationStation, travelType, travelTimeSeconds));
     }
 
+    /**
+     * Starts a train journey for a player.
+     * @param player The player.
+     * @param destinationStation The destination station.
+     * @param travelType The type of travel.
+     * @param travelTimeTicks The travel time in ticks.
+     */
     public void startTrainJourney(Player player, String destinationStation, String travelType, int travelTimeTicks) {
         if (travelingPlayers.containsKey(player.getUniqueId())) {
             player.sendMessage(ChatColor.RED + "You are already traveling!");
@@ -192,6 +208,12 @@ public class StationManager implements Listener {
         }.runTaskTimer(plugin, 0, 1);
     }
 
+    /**
+     * Completes a train journey for a player.
+     * @param player The player.
+     * @param stationName The destination station name.
+     * @param travelType The type of travel.
+     */
     public void completeJourney(Player player, String stationName, String travelType) {
         Station destStation = getStation(stationName);
         if (destStation == null) {

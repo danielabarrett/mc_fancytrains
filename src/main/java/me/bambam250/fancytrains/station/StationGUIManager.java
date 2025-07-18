@@ -4,7 +4,6 @@ import me.bambam250.fancytrains.Fancytrains;
 import me.bambam250.fancytrains.objects.Line;
 import me.bambam250.fancytrains.objects.Station;
 import org.bukkit.*;
-import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.Inventory;
@@ -19,14 +18,12 @@ public class StationGUIManager {
 
     private final Fancytrains plugin;
     private final StationManager stationManager;
-    private final FileConfiguration ftConfig;
 
     private final List<Material> BANNERS = List.of(Material.BLACK_BANNER, Material.BLUE_BANNER, Material.BROWN_BANNER, Material.CYAN_BANNER, Material.GRAY_BANNER, Material.GREEN_BANNER, Material.LIGHT_BLUE_BANNER, Material.LIGHT_GRAY_BANNER, Material.LIME_BANNER, Material.MAGENTA_BANNER, Material.ORANGE_BANNER, Material.PINK_BANNER, Material.PURPLE_BANNER, Material.RED_BANNER, Material.WHITE_BANNER, Material.YELLOW_BANNER);
 
     public StationGUIManager(Fancytrains pl) {
         this.plugin = pl;
         this.stationManager = pl.stationManager;
-        this.ftConfig = pl.configManager.getFtConfig();
     }
 
     /**
@@ -117,7 +114,6 @@ public class StationGUIManager {
         List<Station> connections = currentStation.getConnections();
         Line currentLine = currentStation.getLine();
 
-        // Filter connections based on travel type
         List<Station> filteredConnections = new ArrayList<>();
         for (Station connectedStation : connections) {
             Line connectedLine = connectedStation.getLine();
@@ -148,7 +144,6 @@ public class StationGUIManager {
 
             String displayName = station.getDisplayName();
 
-            // Use Station's built-in function to get formatted travel time
             String travelTimeStr = currentStation.getTravelTime(station);
 
             List<String> lore = new ArrayList<>();
@@ -184,22 +179,7 @@ public class StationGUIManager {
         String menuTitle = ChatColor.DARK_GREEN + "Confirm Travel";
         Inventory inv = Bukkit.createInventory(null, 9, menuTitle);
 
-        // Use player's current station for travel time calculation
-        Station currentStation = null;
-        for (Station station : stationManager.getStations()) {
-            if (station.getStationMaster() != null && station.getStationMaster().getUniqueId().equals(player.getUniqueId())) {
-                currentStation = station;
-                break;
-            }
-        }
-        // Fallback: use player's location as current station if not found
-        String travelTimeStr;
-        if (currentStation != null) {
-            travelTimeStr = currentStation.getTravelTime(destStation);
-        } else {
-            // fallback to seconds argument if current station is unknown
-            travelTimeStr = Fancytrains.formatTime(travelTimeSeconds * 20);
-        }
+        String travelTimeStr = destStation.getTravelTime(player.getLocation());
 
         // Confirm item
         ItemStack confirm = new ItemStack(Material.LIME_CONCRETE);
@@ -222,7 +202,7 @@ public class StationGUIManager {
         player.openInventory(inv);
 
         // Store pending travel info in StationManager
-        stationManager.addPendingTraveler(player, destinationStationName, travelType, travelTimeSeconds);
+        stationManager.addPendingTraveler(player, destinationStationName, travelType, destStation.getTravelTimeTicks(player.getLocation()) / 20);
     }
 
     /**
@@ -284,18 +264,12 @@ public class StationGUIManager {
 
             player.closeInventory();
 
-            // Determine travel type based on title
             String travelType = title.contains("International") ? "international" : "domestic";
 
             // Calculate travel time in seconds
             Location currentLoc = player.getLocation();
-            Location destLoc = null;
-            Line destLine = destStation.getLine();
-            if (destLine != null && destLine.getTrainLocation() != null) {
-                destLoc = destLine.getTrainLocation();
-            } else {
-                destLoc = destStation.getLocation();
-            }
+            Location destLoc = destStation.getLocation();
+
             int travelTimeSeconds;
             if (currentLoc != null && destLoc != null && currentLoc.getWorld().equals(destLoc.getWorld())) {
                 travelTimeSeconds = (int) currentLoc.distance(destLoc) / 20;
@@ -323,7 +297,6 @@ public class StationGUIManager {
 
             if (event.getCurrentItem().getType() == Material.LIME_CONCRETE) {
                 player.closeInventory();
-                // Start the journey with the stored travel time
                 stationManager.startTrainJourney(player, pending.destinationStation, pending.travelType, pending.travelTimeSeconds * 20);
                 stationManager.removePendingTravel(player.getUniqueId());
             } else if (event.getCurrentItem().getType() == Material.RED_CONCRETE) {
@@ -331,7 +304,6 @@ public class StationGUIManager {
                 player.sendMessage(ChatColor.YELLOW + "Travel cancelled.");
                 stationManager.removePendingTravel(player.getUniqueId());
             }
-            return;
         }
     }
 }

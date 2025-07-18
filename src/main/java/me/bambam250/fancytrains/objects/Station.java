@@ -43,13 +43,6 @@ public class Station {
 
         spawnStationMaster();
 
-//        ftConfig.set("stations." + name + ".location.world", location.getWorld().getName());
-//        ftConfig.set("stations." + name + ".location.x", location.getX());
-//        ftConfig.set("stations." + name + ".location.y", location.getY());
-//        ftConfig.set("stations." + name + ".location.z", location.getZ());
-//        ftConfig.set("stations." + name + ".location.yaw", location.getYaw());
-//        ftConfig.set("stations." + name + ".location.pitch", location.getPitch());
-
         ftConfig.set("stations." + name + ".location", location);
         ftConfig.set("stations." + name + ".display-name", displayName);
         ftConfig.set("stations." + name + ".line", line.getName());
@@ -65,13 +58,6 @@ public class Station {
     public Station(String name, Line line) {
         this.name = name;
         this.displayName = ftConfig.getString("stations." + name + ".display-name", name);
-//        this.location = new Location(Bukkit.getWorld(
-//                ftConfig.getString("stations." + name + ".location.world")),
-//                ftConfig.getDouble("stations." + name + ".location.x"),
-//                ftConfig.getDouble("stations." + name + ".location.y"),
-//                ftConfig.getDouble("stations." + name + ".location.z"),
-//                (float) ftConfig.getDouble("stations." + name + ".location.yaw"),
-//                (float) ftConfig.getDouble("stations." + name + ".location.pitch"));
         this.location = ftConfig.getLocation("stations." + name + ".location");
         this.line = line;
         this.connections = new ArrayList<>();
@@ -128,16 +114,6 @@ public class Station {
         return null;
     }
 
-    public void setStationMasterUUID(UUID uuid) {
-        this.stationMasterUUID = uuid;
-        if (uuid != null) {
-            ftConfig.set("stations." + name + ".npc", uuid.toString());
-        } else {
-            ftConfig.set("stations." + name + ".npc", null);
-        }
-        plugin.configManager.saveStations();
-    }
-
     public UUID getStationMasterUUID() {
         return stationMasterUUID;
     }
@@ -171,12 +147,24 @@ public class Station {
                 || !location.getWorld().equals(destination.getWorld())) {
             return "0s";
         }
-        int ticks = (int) location.distance(destination); // 1 block = 20 ticks
+        int ticks = Math.max((int) location.distance(destination), 20);
         int seconds =  ticks / 20;
         int minutes = seconds / 60;
         seconds %= 60;
 //        return minutes > 0 ? String.format("%02d:%02d", minutes, seconds) : String.format("00:%02d seconds", seconds);
         return String.format("%02d:%02d", minutes, seconds);
+    }
+
+    public int getTravelTimeTicks(Station destination) {
+        return getTravelTimeTicks(destination.getLocation());
+    }
+
+    public int getTravelTimeTicks(Location destination) {
+        if (location == null || destination == null || location.getWorld() == null || destination.getWorld() == null
+                || !location.getWorld().equals(destination.getWorld())) {
+            return 0;
+        }
+        return Math.max((int) location.distance(destination), 20);
     }
 
     // Getters and Setters
@@ -203,13 +191,7 @@ public class Station {
 
     public void setLocation(Location location) {
         this.location = location;
-//        ftConfig.set("stations." + name + ".location.world", location.getWorld().getName());
-//        ftConfig.set("stations." + name + ".location.x", location.getX());
-//        ftConfig.set("stations." + name + ".location.y", location.getY());
-//        ftConfig.set("stations." + name + ".location.z", location.getZ());
-//        ftConfig.set("stations." + name + ".location.yaw", location.getYaw());
-//        ftConfig.set("stations." + name + ".location.pitch", location.getPitch());
-        ftConfig.set("lines." + name + ".location", location);
+        ftConfig.set("stations." + name + ".location", location);
         plugin.configManager.saveStations();
     }
 

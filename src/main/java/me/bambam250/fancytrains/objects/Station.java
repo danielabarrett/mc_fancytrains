@@ -43,12 +43,14 @@ public class Station {
 
         spawnStationMaster();
 
-        ftConfig.set("stations." + name + ".location.world", location.getWorld().getName());
-        ftConfig.set("stations." + name + ".location.x", location.getX());
-        ftConfig.set("stations." + name + ".location.y", location.getY());
-        ftConfig.set("stations." + name + ".location.z", location.getZ());
-        ftConfig.set("stations." + name + ".location.yaw", location.getYaw());
-        ftConfig.set("stations." + name + ".location.pitch", location.getPitch());
+//        ftConfig.set("stations." + name + ".location.world", location.getWorld().getName());
+//        ftConfig.set("stations." + name + ".location.x", location.getX());
+//        ftConfig.set("stations." + name + ".location.y", location.getY());
+//        ftConfig.set("stations." + name + ".location.z", location.getZ());
+//        ftConfig.set("stations." + name + ".location.yaw", location.getYaw());
+//        ftConfig.set("stations." + name + ".location.pitch", location.getPitch());
+
+        ftConfig.set("stations." + name + ".location", location);
         ftConfig.set("stations." + name + ".display-name", displayName);
         ftConfig.set("stations." + name + ".line", line.getName());
         ftConfig.set("stations." + name + ".connections", Arrays.asList());
@@ -63,13 +65,14 @@ public class Station {
     public Station(String name, Line line) {
         this.name = name;
         this.displayName = ftConfig.getString("stations." + name + ".display-name", name);
-        this.location = new Location(Bukkit.getWorld(
-                ftConfig.getString("stations." + name + ".location.world")),
-                ftConfig.getDouble("stations." + name + ".location.x"),
-                ftConfig.getDouble("stations." + name + ".location.y"),
-                ftConfig.getDouble("stations." + name + ".location.z"),
-                (float) ftConfig.getDouble("stations." + name + ".location.yaw"),
-                (float) ftConfig.getDouble("stations." + name + ".location.pitch"));
+//        this.location = new Location(Bukkit.getWorld(
+//                ftConfig.getString("stations." + name + ".location.world")),
+//                ftConfig.getDouble("stations." + name + ".location.x"),
+//                ftConfig.getDouble("stations." + name + ".location.y"),
+//                ftConfig.getDouble("stations." + name + ".location.z"),
+//                (float) ftConfig.getDouble("stations." + name + ".location.yaw"),
+//                (float) ftConfig.getDouble("stations." + name + ".location.pitch"));
+        this.location = ftConfig.getLocation("stations." + name + ".location");
         this.line = line;
         this.connections = new ArrayList<>();
         String uuidStr = ftConfig.getString("stations." + name + ".npc");
@@ -200,12 +203,13 @@ public class Station {
 
     public void setLocation(Location location) {
         this.location = location;
-        ftConfig.set("stations." + name + ".location.world", location.getWorld().getName());
-        ftConfig.set("stations." + name + ".location.x", location.getX());
-        ftConfig.set("stations." + name + ".location.y", location.getY());
-        ftConfig.set("stations." + name + ".location.z", location.getZ());
-        ftConfig.set("stations." + name + ".location.yaw", location.getYaw());
-        ftConfig.set("stations." + name + ".location.pitch", location.getPitch());
+//        ftConfig.set("stations." + name + ".location.world", location.getWorld().getName());
+//        ftConfig.set("stations." + name + ".location.x", location.getX());
+//        ftConfig.set("stations." + name + ".location.y", location.getY());
+//        ftConfig.set("stations." + name + ".location.z", location.getZ());
+//        ftConfig.set("stations." + name + ".location.yaw", location.getYaw());
+//        ftConfig.set("stations." + name + ".location.pitch", location.getPitch());
+        ftConfig.set("lines." + name + ".location", location);
         plugin.configManager.saveStations();
     }
 

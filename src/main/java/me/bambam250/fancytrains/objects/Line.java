@@ -133,13 +133,19 @@ public class Line {
 
     /**
      * Save a banner item to config using serialization.
+     * Only the banner's patterns and base color are saved; ItemFlags, lore, and display-name are omitted.
      * @param banner The banner ItemStack to save.
      * @param configPath The path in config (should be under "lines.<line>.<flag>").
      * @return True if saved successfully, false otherwise.
      */
     private boolean saveBannerToConfig(ItemStack banner, String configPath) {
         if (!(banner.getItemMeta() instanceof BannerMeta meta)) return false;
-        ftConfig.set(configPath, banner);
+        // Create a new ItemStack with only the base color and patterns
+        ItemStack cleanBanner = new ItemStack(banner.getType());
+        BannerMeta cleanMeta = (BannerMeta) cleanBanner.getItemMeta();
+        cleanMeta.setPatterns(meta.getPatterns());
+        cleanBanner.setItemMeta(cleanMeta);
+        ftConfig.set(configPath, cleanBanner);
         plugin.configManager.saveStations();
         return true;
     }

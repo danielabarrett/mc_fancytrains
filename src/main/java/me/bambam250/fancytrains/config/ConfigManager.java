@@ -46,4 +46,24 @@ public class ConfigManager {
     public FileConfiguration getFtConfig() {
         return ftConfig;
     }
+
+    /**
+     * Remove a station from the config file.
+     *
+     * @param stationName The name of the station to remove.
+     */
+    public void removeStationFromConfig(String stationName) {
+        ftConfig.set("stations." + stationName, null);
+        saveStations();
+    }
+
+    /**
+     * Remove a line from the config file.
+     *
+     * @param lineName The name of the line to remove.
+     */
+    public void removeLineFromConfig(String lineName) {
+        ftConfig.set("lines." + lineName, null);
+        saveStations();
+    }
 }

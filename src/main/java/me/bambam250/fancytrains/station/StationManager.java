@@ -109,8 +109,8 @@ public class StationManager implements Listener {
         String npcStation = null;
         UUID npcId = villager.getUniqueId();
         for (Station station : stations) {
-            String uuidStr = station.getStationMaster().getUniqueId().toString();
-            if (uuidStr != null && uuidStr.equals(npcId.toString())) {
+            UUID uuidStr = station.getStationMasterUUID();
+            if (uuidStr != null && uuidStr.equals(npcId)) {
                 npcStation = station.getName();
                 break;
             }
@@ -297,6 +297,7 @@ public class StationManager implements Listener {
 
     public void removeStation(Station station) {
         this.stations.remove(station);
+        plugin.configManager.removeStationFromConfig(station.getName());
     }
 
     public List<Line> getLines() {
@@ -327,6 +328,7 @@ public class StationManager implements Listener {
 
     public void removeLine(Line line) {
         this.lines.remove(line);
+        plugin.configManager.removeLineFromConfig(line.getName());
     }
 
     /**

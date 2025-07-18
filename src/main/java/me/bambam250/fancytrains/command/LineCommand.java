@@ -1,21 +1,28 @@
 package me.bambam250.fancytrains.command;
 
 import me.bambam250.fancytrains.Fancytrains;
+import me.bambam250.fancytrains.objects.Line;
+import me.bambam250.fancytrains.objects.Station;
+import me.bambam250.fancytrains.station.StationManager;
 import org.bukkit.ChatColor;
+import org.bukkit.Location;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BannerMeta;
-import org.bukkit.Location;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.List;
+
 public class LineCommand implements CommandExecutor {
-    Fancytrains plugin;
+    private final Fancytrains plugin;
+    private final StationManager stationManager;
 
     public LineCommand(Fancytrains pl) {
-        plugin = pl;
+        this.plugin = pl;
+        this.stationManager = pl.stationManager;
     }
 
     @Override
@@ -25,7 +32,16 @@ public class LineCommand implements CommandExecutor {
             return true;
         }
 
-//        Player player = (Player) sender;
+        if (args.length == 0) {
+            player.sendMessage(ChatColor.YELLOW + "Train Line Commands:");
+            player.sendMessage(ChatColor.GREEN + "/line list" + ChatColor.GRAY + " - List all train lines");
+            player.sendMessage(ChatColor.GREEN + "/line create" + ChatColor.GRAY + " <line> <color> <display-name> - Create a new line");
+            player.sendMessage(ChatColor.GREEN + "/line remove" + ChatColor.GRAY + " <line> - Remove a line");
+            player.sendMessage(ChatColor.GREEN + "/line setflag" + ChatColor.GRAY + " <line> - Set the flag/banner for a line");
+            player.sendMessage(ChatColor.GREEN + "/line modify" + ChatColor.GRAY + " <line> <attribute> <value> - Modify a line's attribute");
+            player.sendMessage(ChatColor.GREEN + "/line settrain" + ChatColor.GRAY + " <line> - Set the train location for a line");
+            return true;
+        }
 
         if (args[0].equalsIgnoreCase("list")) {
             listLines(player);
@@ -38,6 +54,20 @@ public class LineCommand implements CommandExecutor {
                 return true;
             }
 
+            String lineName = args[1].toLowerCase();
+            if (stationManager.isLine(lineName)) {
+                player.sendMessage(ChatColor.RED + "Train line already exists!");
+                return true;
+            }
+
+            String colorName = args[2].toUpperCase();
+            try {
+                ChatColor.valueOf(colorName);
+            } catch (IllegalArgumentException e) {
+                player.sendMessage(ChatColor.RED + "Invalid color! Use: RED, BLUE, GREEN, YELLOW, etc.");
+                return true;
+            }
+
             // Concatenate args[3] and onward into a displayName string
             StringBuilder displayNameBuilder = new StringBuilder();
             for (int i = 3; i < args.length; i++) {
@@ -46,7 +76,10 @@ public class LineCommand implements CommandExecutor {
             }
             String displayName = displayNameBuilder.toString();
 
-            addLine(player, args[1].toLowerCase(), displayName, args[2].toUpperCase());
+            Line line = new Line(lineName, colorName, displayName, null);
+            stationManager.addLine(line);
+
+            player.sendMessage(ChatColor.GREEN + "Added train line: " + ChatColor.valueOf(colorName) + displayName);
             return true;
         }
 
@@ -64,13 +97,18 @@ public class LineCommand implements CommandExecutor {
                 player.sendMessage(ChatColor.RED + "Usage: /line setflag <line name>");
                 return true;
             }
+            Line line = stationManager.getLine(args[1].toLowerCase());
+            if (line == null) {
+                player.sendMessage(ChatColor.RED + "Line does not exist!");
+                return true;
+            }
             ItemStack flag = player.getInventory().getItemInMainHand();
             if (!(flag.getItemMeta() instanceof BannerMeta)) {
                 player.sendMessage(ChatColor.RED + "Please hold a banner when using this command");
                 return true;
             }
-            setLineFlag(player, args[1], flag);
-            player.sendMessage(ChatColor.GREEN + "Saved this flag for " + args[1]);
+            line.setFlag(flag);
+            player.sendMessage(ChatColor.GREEN + "Saved this flag for " + line.getName());
             return true;
         }
 
@@ -81,7 +119,6 @@ public class LineCommand implements CommandExecutor {
             }
             String lineName = args[1].toLowerCase();
             String attribute = args[2].toLowerCase();
-            // Concatenate the rest of the args as the value (to allow spaces)
             StringBuilder valueBuilder = new StringBuilder();
             for (int i = 3; i < args.length; i++) {
                 if (i > 3) valueBuilder.append(" ");
@@ -99,12 +136,13 @@ public class LineCommand implements CommandExecutor {
             }
 
             String lineName = args[1].toLowerCase();
-            if (!plugin.configManager.ftConfig.contains("lines." + lineName)) {
+            Line line = stationManager.getLine(lineName);
+            if (line == null) {
                 player.sendMessage(ChatColor.RED + "Line does not exist!");
                 return true;
             }
 
-            setTrainLocation(player, lineName);
+            setTrainLocation(player, line);
             return true;
         }
 
@@ -112,91 +150,56 @@ public class LineCommand implements CommandExecutor {
     }
 
     private void listLines(Player player) {
-        if (plugin.configManager.ftConfig.getConfigurationSection("lines") == null) {
+        List<Line> lines = stationManager.getLines();
+        if (lines.isEmpty()) {
             player.sendMessage(ChatColor.YELLOW + "No train lines found!");
             return;
         }
 
         player.sendMessage(ChatColor.YELLOW + "Available Train Lines:");
-        for (String lineName : plugin.configManager.ftConfig.getConfigurationSection("lines").getKeys(false)) {
-            String displayName = plugin.configManager.ftConfig.getString("lines." + lineName + ".display-name");
-            ChatColor color = ChatColor.valueOf(plugin.configManager.ftConfig.getString("lines." + lineName + ".color"));
-            player.sendMessage(color + "- " + displayName + " (" + lineName + ")");
+        for (Line line : lines) {
+            player.sendMessage(line.getColor() + "- " + line.getDisplayName() + " (" + line.getName() + ")");
         }
-    }
-
-    private void addLine(Player player, String lineName, String displayName, String colorName) {
-        if (plugin.configManager.ftConfig.contains("lines." + lineName)) {
-            player.sendMessage(ChatColor.RED + "Train line already exists!");
-            return;
-        }
-
-        try {
-            ChatColor.valueOf(colorName);
-        } catch (IllegalArgumentException e) {
-            player.sendMessage(ChatColor.RED + "Invalid color! Use: RED, BLUE, GREEN, YELLOW, etc.");
-            return;
-        }
-
-        plugin.configManager.ftConfig.set("lines." + lineName + ".display-name", displayName);
-        plugin.configManager.ftConfig.set("lines." + lineName + ".color", colorName);
-        plugin.configManager.saveStations();
-
-        ChatColor color = ChatColor.valueOf(colorName);
-        player.sendMessage(ChatColor.GREEN + "Added train line: " + color + displayName);
     }
 
     private void removeLine(Player player, String lineName) {
-        if (!plugin.configManager.ftConfig.contains("lines." + lineName)) {
+        Line line = stationManager.getLine(lineName);
+        if (line == null) {
             player.sendMessage(ChatColor.RED + "Train line does not exist!");
             return;
         }
 
         // Prevent removal if any station is assigned to this line
-        if (plugin.configManager.ftConfig.getConfigurationSection("stations") != null) {
-            for (String station : plugin.configManager.ftConfig.getConfigurationSection("stations").getKeys(false)) {
-                String stationLine = plugin.configManager.ftConfig.getString("stations." + station + ".line");
-                if (lineName.equalsIgnoreCase(stationLine)) {
-                    player.sendMessage(ChatColor.RED + "Cannot remove line: There are stations assigned to this line (" + station + ").");
-                    return;
-                }
+        for (Station station : stationManager.getStations()) {
+            if (lineName.equalsIgnoreCase(station.getLine().getName())) {
+                player.sendMessage(ChatColor.RED + "Cannot remove line: There are stations assigned to this line (" + station.getName() + ").");
+                return;
             }
         }
 
-        // Remove the line from config
-        plugin.configManager.ftConfig.set("lines." + lineName, null);
-
-        plugin.configManager.saveStations();
+        stationManager.removeLine(line);
         player.sendMessage(ChatColor.GREEN + "Removed train line: " + lineName);
     }
 
-    private void setLineFlag(Player player, String lineName, ItemStack flag) {
-        plugin.stationManager.saveBannerToConfig(flag, "lines." + lineName + ".flag");
-        plugin.configManager.saveStations();
-        player.sendMessage(ChatColor.GREEN + "Added flag to " + lineName);
-    }
-
     private void modifyLine(Player player, String lineName, String attribute, String value) {
-        if (!plugin.configManager.ftConfig.contains("lines." + lineName)) {
+        Line line = stationManager.getLine(lineName);
+        if (line == null) {
             player.sendMessage(ChatColor.RED + "Train line does not exist!");
             return;
         }
 
         switch (attribute) {
             case "display-name":
-                plugin.configManager.ftConfig.set("lines." + lineName + ".display-name", value);
-                plugin.configManager.saveStations();
+                line.setDisplayName(value);
                 player.sendMessage(ChatColor.GREEN + "Set display name for " + lineName + " to " + value);
                 break;
             case "color":
                 try {
-                    ChatColor.valueOf(value.toUpperCase());
+                    line.setColor(value.toUpperCase());
                 } catch (IllegalArgumentException e) {
                     player.sendMessage(ChatColor.RED + "Invalid color! Use: RED, BLUE, GREEN, YELLOW, etc.");
                     return;
                 }
-                plugin.configManager.ftConfig.set("lines." + lineName + ".color", value.toUpperCase());
-                plugin.configManager.saveStations();
                 player.sendMessage(ChatColor.GREEN + "Set color for " + lineName + " to " + value.toUpperCase());
                 break;
             default:
@@ -204,19 +207,9 @@ public class LineCommand implements CommandExecutor {
         }
     }
 
-    // Now set train location for a line, not a station
-    private void setTrainLocation(Player player, String lineName) {
+    private void setTrainLocation(Player player, Line line) {
         Location loc = player.getLocation();
-
-        plugin.configManager.ftConfig.set("lines." + lineName + ".train-location.world", loc.getWorld().getName());
-        plugin.configManager.ftConfig.set("lines." + lineName + ".train-location.x", loc.getX());
-        plugin.configManager.ftConfig.set("lines." + lineName + ".train-location.y", loc.getY());
-        plugin.configManager.ftConfig.set("lines." + lineName + ".train-location.z", loc.getZ());
-
-        plugin.stationManager.trainLocations.put(lineName, loc);
-        plugin.configManager.saveStations();
-
-        player.sendMessage(ChatColor.GREEN + "Train location set for line " + lineName + "!");
+        line.setTrainLocation(loc);
+        player.sendMessage(ChatColor.GREEN + "Train location set for line " + line.getName() + "!");
     }
-
 }

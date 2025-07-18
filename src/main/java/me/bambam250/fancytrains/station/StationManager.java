@@ -1,10 +1,9 @@
 package me.bambam250.fancytrains.station;
 
 import me.bambam250.fancytrains.Fancytrains;
+import me.bambam250.fancytrains.objects.Line;
+import me.bambam250.fancytrains.objects.Station;
 import org.bukkit.*;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Villager;
 import org.bukkit.event.EventHandler;
@@ -14,184 +13,21 @@ import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.BannerMeta;
+import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.scheduler.BukkitRunnable;
 
+import javax.annotation.Nullable;
 import java.util.*;
 import java.util.logging.Level;
 
 public class StationManager implements Listener {
     private final Fancytrains plugin;
-    public Map<UUID, String> travelingPlayers = new HashMap<>();
-    public Map<String, Location> trainLocations = new HashMap<>();
-    public Map<String, Set<String>> stationConnections = new HashMap<>();
-    private FileConfiguration ftConfig;
 
-    private final List<Material> BANNERS = List.of(Material.BLACK_BANNER, Material.BLUE_BANNER, Material.BROWN_BANNER, Material.CYAN_BANNER, Material.GRAY_BANNER, Material.GREEN_BANNER, Material.LIGHT_BLUE_BANNER, Material.LIGHT_GRAY_BANNER, Material.LIME_BANNER, Material.MAGENTA_BANNER, Material.ORANGE_BANNER, Material.PINK_BANNER, Material.PURPLE_BANNER, Material.RED_BANNER, Material.WHITE_BANNER, Material.YELLOW_BANNER);
+    private final List<Station> stations = new ArrayList<>();
+    private final List<Line> lines = new ArrayList<>();
 
     // Track spawned NPCs by station name for easy removal
     private final Map<String, UUID> stationNPCs = new HashMap<>();
-
-    public StationManager(Fancytrains plugin) {
-        this.plugin = plugin;
-        ftConfig = plugin.configManager.ftConfig;
-        loadStations();
-    }
-
-    public void saveStations() {
-        plugin.configManager.saveStations();
-    }
-
-    /**
-     * Loads stations and train locations from the configuration file into memory.
-     */
-    public void loadStations() {
-        trainLocations.clear();
-        stationConnections.clear();
-
-        // Load train locations per line
-        if (ftConfig.getConfigurationSection("lines") != null) {
-            for (String lineName : ftConfig.getConfigurationSection("lines").getKeys(false)) {
-                String path = "lines." + lineName + ".train-location";
-                if (ftConfig.contains(path + ".world")) {
-                    String worldName = ftConfig.getString(path + ".world");
-                    double x = ftConfig.getDouble(path + ".x");
-                    double y = ftConfig.getDouble(path + ".y");
-                    double z = ftConfig.getDouble(path + ".z");
-                    World world = Bukkit.getWorld(worldName);
-                    if (world != null) {
-                        trainLocations.put(lineName, new Location(world, x, y, z));
-                    }
-                }
-            }
-        }
-
-        // Load connections and spawn NPCs for existing stations
-        if (ftConfig.getConfigurationSection("stations") != null) {
-            for (String stationName : ftConfig.getConfigurationSection("stations").getKeys(false)) {
-                List<String> connections = ftConfig.getStringList("stations." + stationName + ".connections");
-                stationConnections.put(stationName, new HashSet<>(connections));
-                if (!ftConfig.getBoolean("stations." + stationName + ".npc-spawned", false)) {
-                    spawnStationNPC(stationName);
-                }
-            }
-        }
-    }
-
-    /**
-     * Spawns a Station Master NPC at the specified station's location.
-     * @param stationName The name of the station where the NPC should be spawned.
-     */
-    public void spawnStationNPC(String stationName) {
-        String worldName = ftConfig.getString("stations." + stationName + ".world");
-        double x = ftConfig.getDouble("stations." + stationName + ".x");
-        double y = ftConfig.getDouble("stations." + stationName + ".y");
-        double z = ftConfig.getDouble("stations." + stationName + ".z");
-
-        World world = Bukkit.getWorld(worldName);
-        if (world == null) return;
-
-        Location loc = new Location(world, x, y, z);
-        Villager npc = (Villager) world.spawnEntity(loc, EntityType.VILLAGER);
-
-        String displayName = ftConfig.getString("stations." + stationName + ".display-name");
-        String trainLine = ftConfig.getString("stations." + stationName + ".line");
-        String lineDisplayName = ftConfig.getString("lines." + trainLine + ".display-name");
-        ChatColor lineColor = ChatColor.valueOf(ftConfig.getString("lines." + trainLine + ".color"));
-
-        npc.setCustomName(ChatColor.GOLD + "Station Master - " + displayName + " " + lineColor + "(" + lineDisplayName + ")");
-        npc.setCustomNameVisible(true);
-        npc.setAI(false);
-        npc.setInvulnerable(true);
-        npc.setCollidable(false);
-        npc.setSilent(true);
-
-        // Store that NPC was spawned
-        ftConfig.set("stations." + stationName + ".npc-spawned", true);
-        saveStations();
-
-        // Track NPC by station name
-        stationNPCs.put(stationName, npc.getUniqueId());
-    }
-
-    /**
-     * Removes the Station Master NPC associated with the given station.
-     * @param stationName The name of the station.
-     */
-    public void removeStationNPC(String stationName) {
-        UUID npcId = stationNPCs.get(stationName);
-        if (npcId != null) {
-            for (World world : Bukkit.getWorlds()) {
-                Entity entity = world.getEntity(npcId);
-                if (entity instanceof Villager) {
-                    entity.remove();
-                    break;
-                }
-            }
-            stationNPCs.remove(stationName);
-        } else {
-            // Fallback: try to find by location if not tracked
-            String worldName = ftConfig.getString("stations." + stationName + ".world");
-            double x = ftConfig.getDouble("stations." + stationName + ".x");
-            double y = ftConfig.getDouble("stations." + stationName + ".y");
-            double z = ftConfig.getDouble("stations." + stationName + ".z");
-            World world = Bukkit.getWorld(worldName);
-            if (world != null) {
-                Location loc = new Location(world, x, y, z);
-                for (Entity entity : world.getNearbyEntities(loc, 2, 2, 2)) {
-                    if (entity instanceof Villager villager && villager.getCustomName() != null && villager.getCustomName().contains("Station Master")) {
-                        entity.remove();
-                    }
-                }
-            }
-        }
-        ftConfig.set("stations." + stationName + ".npc-spawned", false);
-        saveStations();
-    }
-
-    /**
-     * Handles player interaction with Station Master NPCs.
-     * @param event The PlayerInteractEntityEvent triggered by the interaction.
-     */
-    @EventHandler
-    public void onPlayerInteractEntity(PlayerInteractEntityEvent event) {
-        if (!(event.getRightClicked() instanceof Villager)) return;
-
-        Villager villager = (Villager) event.getRightClicked();
-        if (villager.getCustomName() == null || !villager.getCustomName().contains("Station Master")) return;
-
-        event.setCancelled(true);
-
-        // Find which station this NPC belongs to
-        String npcStation = findStationByNPCLocation(villager.getLocation());
-        if (npcStation == null) {
-            event.getPlayer().sendMessage(ChatColor.RED + "Station not found!");
-            return;
-        }
-
-        plugin.GUIManager.openStationMenu(event.getPlayer(), npcStation);
-    }
-
-    /**
-     * Finds the station name by matching the NPC's location to station locations.
-     * @param npcLoc The location of the NPC.
-     * @return The station name if found, otherwise null.
-     */
-    public String findStationByNPCLocation(Location npcLoc) {
-        for (String stationName : ftConfig.getConfigurationSection("stations").getKeys(false)) {
-            String worldName = ftConfig.getString("stations." + stationName + ".world");
-            double x = ftConfig.getDouble("stations." + stationName + ".x");
-            double y = ftConfig.getDouble("stations." + stationName + ".y");
-            double z = ftConfig.getDouble("stations." + stationName + ".z");
-
-            if (npcLoc.getWorld().getName().equals(worldName) &&
-                    npcLoc.distanceSquared(new Location(npcLoc.getWorld(), x, y, z)) < 25) { // Within 5 blocks
-                return stationName;
-            }
-        }
-        return null;
-    }
 
     // Helper class to track pending travel confirmations
     public static class PendingTravel {
@@ -208,6 +44,82 @@ public class StationManager implements Listener {
 
     // Map to track pending travel confirmations
     private final Map<UUID, PendingTravel> pendingTravel = new HashMap<>();
+    public Map<UUID, String> travelingPlayers = new HashMap<>();
+
+    public StationManager(Fancytrains plugin) {
+        this.plugin = plugin;
+        loadStations();
+    }
+
+    public void saveStations() {
+        plugin.configManager.saveStations();
+    }
+
+    /**
+     * Loads stations and lines from the configuration file into memory.
+     */
+    public void loadStations() {
+        stations.clear();
+        lines.clear();
+
+        var ftConfig = plugin.configManager.getFtConfig();
+        // Load lines
+        if (ftConfig.getConfigurationSection("lines") != null) {
+            for (String lineName : ftConfig.getConfigurationSection("lines").getKeys(false)) {
+                lines.add(new Line(lineName));
+            }
+        }
+
+        // Load stations
+        if (ftConfig.getConfigurationSection("stations") != null) {
+            for (String stationName : ftConfig.getConfigurationSection("stations").getKeys(false)) {
+                Bukkit.getLogger().log(Level.INFO, "Loading station: " + stationName);
+                Line stationLine = getLine(ftConfig.getString("stations." + stationName + ".line"));
+                Station station = new Station(stationName, stationLine);
+                stations.add(station);
+                if (stationLine != null) {
+                    stationLine.addStation(station);
+                }
+            }
+            // Load connections
+            for (Station station : stations) {
+                List<String> connections = ftConfig.getStringList("stations." + station.getName() + ".connections");
+                for (String conn : connections) {
+                    Station connectedStation = getStation(conn);
+                    if (connectedStation != null) {
+                        station.addConnection(connectedStation);
+                    }
+                }
+            }
+        }
+    }
+
+    // --- Event Handlers and Logic ---
+
+    @EventHandler
+    public void onPlayerInteractEntity(PlayerInteractEntityEvent event) {
+        if (!(event.getRightClicked() instanceof Villager villager)) return;
+        if (villager.getCustomName() == null || !villager.getCustomName().contains("Station Master")) return;
+
+        event.setCancelled(true);
+
+        // Find which station this NPC belongs to (by UUID)
+        String npcStation = null;
+        UUID npcId = villager.getUniqueId();
+        for (Station station : stations) {
+            String uuidStr = station.getStationMaster().getUniqueId().toString();
+            if (uuidStr != null && uuidStr.equals(npcId.toString())) {
+                npcStation = station.getName();
+                break;
+            }
+        }
+        if (npcStation == null) {
+            event.getPlayer().sendMessage(ChatColor.RED + "Station not found!");
+            return;
+        }
+
+        plugin.GUIManager.openStationMenu(event.getPlayer(), npcStation);
+    }
 
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
@@ -216,129 +128,27 @@ public class StationManager implements Listener {
         Player player = (Player) event.getWhoClicked();
         String title = event.getView().getTitle();
 
-        if (title.startsWith(ChatColor.DARK_BLUE + "Travel Type")) {
-            event.setCancelled(true);
-
-            if (event.getCurrentItem() == null) return;
-
-            String currentStation = title.substring(title.lastIndexOf(" - ") + 3);
-            // Find station by display name
-            String stationName = null;
-            for (String name : ftConfig.getConfigurationSection("stations").getKeys(false)) {
-                if (ftConfig.getString("stations." + name + ".display-name").equals(currentStation)) {
-                    stationName = name;
-                    break;
-                }
-            }
-
-            if (stationName == null) return;
-
-            if (event.getCurrentItem().getType() == Material.EMERALD) {
-                player.closeInventory();
-                plugin.GUIManager.openDestinationMenu(player, stationName, "domestic");
-            } else if (event.getCurrentItem().getType() == Material.DIAMOND) {
-                player.closeInventory();
-                plugin.GUIManager.openDestinationMenu(player, stationName, "international");
-            }
-            return;
-        }
-
-        if (title.equals(ChatColor.DARK_BLUE + "Domestic Destinations") ||
-                title.equals(ChatColor.DARK_BLUE + "International Destinations")) {
-            event.setCancelled(true);
-
-            if (event.getCurrentItem() == null ||
-                    (event.getCurrentItem().getType() != Material.RAIL &&
-                            !BANNERS.contains(event.getCurrentItem().getType()))) return;
-
-            String displayName = ChatColor.stripColor(event.getCurrentItem().getItemMeta().getDisplayName());
-
-            // Find station by display name
-            String stationName = null;
-            for (String name : ftConfig.getConfigurationSection("stations").getKeys(false)) {
-                if (ftConfig.getString("stations." + name + ".display-name").equals(displayName)) {
-                    stationName = name;
-                    break;
-                }
-            }
-
-            if (stationName == null) {
-                player.sendMessage(ChatColor.RED + "Station not found!");
-                return;
-            }
-
-            player.closeInventory();
-
-            // Determine travel type based on title
-            String travelType = title.contains("International") ? "international" : "domestic";
-
-            // Calculate travel time in seconds
-            Location currentLoc = player.getLocation();
-            Location destLoc = trainLocations.get(stationName);
-            if (destLoc == null) {
-                String worldName = ftConfig.getString("stations." + stationName + ".world");
-                double x = ftConfig.getDouble("stations." + stationName + ".x");
-                double y = ftConfig.getDouble("stations." + stationName + ".y");
-                double z = ftConfig.getDouble("stations." + stationName + ".z");
-                World world = Bukkit.getWorld(worldName);
-                if (world != null) {
-                    destLoc = new Location(world, x, y, z);
-                }
-            }
-            int travelTimeSeconds;
-            if (currentLoc != null && destLoc != null && currentLoc.getWorld().equals(destLoc.getWorld())) {
-                travelTimeSeconds = (int) currentLoc.distance(destLoc) / 20;
-                if (travelTimeSeconds < 1) travelTimeSeconds = 1;
-            } else {
-                travelTimeSeconds = 5; // fallback default
-                Bukkit.getLogger().log(Level.WARNING, "Could not calculate travel time for " + stationName + ". Using default 5 seconds.");
-            }
-
-            // Open confirmation GUI
-            plugin.GUIManager.openTravelConfirmMenu(player, stationName, travelType, travelTimeSeconds);
-            return;
-        }
-
-        // Confirmation GUI
-        if (title.equals(ChatColor.DARK_GREEN + "Confirm Travel")) {
-            event.setCancelled(true);
-            if (event.getCurrentItem() == null) return;
-
-            PendingTravel pending = pendingTravel.get(player.getUniqueId());
-            if (pending == null) {
-                player.closeInventory();
-                return;
-            }
-
-            if (event.getCurrentItem().getType() == Material.LIME_CONCRETE) {
-                player.closeInventory();
-                // Start the journey with the stored travel time
-                startTrainJourney(player, pending.destinationStation, pending.travelType, pending.travelTimeSeconds * 20);
-                pendingTravel.remove(player.getUniqueId());
-            } else if (event.getCurrentItem().getType() == Material.RED_CONCRETE) {
-                player.closeInventory();
-                player.sendMessage(ChatColor.YELLOW + "Travel cancelled.");
-                pendingTravel.remove(player.getUniqueId());
-            }
-            return;
-        }
+        // Delegate to GUIManager for menu logic
+        plugin.GUIManager.handleInventoryClick(event, player, title, this);
     }
 
     public void addPendingTraveler(Player player, String destinationStation, String travelType, int travelTimeSeconds) {
         pendingTravel.put(player.getUniqueId(), new PendingTravel(destinationStation, travelType, travelTimeSeconds));
     }
 
-    // Overload to support custom travel time in ticks
     public void startTrainJourney(Player player, String destinationStation, String travelType, int travelTimeTicks) {
         if (travelingPlayers.containsKey(player.getUniqueId())) {
             player.sendMessage(ChatColor.RED + "You are already traveling!");
             return;
         }
 
-        // Get line for this station
-        String lineName = ftConfig.getString("stations." + destinationStation + ".line");
-        Location trainLoc = trainLocations.get(lineName);
-        if (trainLoc == null) {
+        Station destStation = getStation(destinationStation);
+        if (destStation == null) {
+            player.sendMessage(ChatColor.RED + "Destination station not found!");
+            return;
+        }
+        Line line = destStation.getLine();
+        if (line == null || line.getTrainLocation() == null) {
             player.sendMessage(ChatColor.RED + "Train location not set for this line!");
             return;
         }
@@ -346,11 +156,10 @@ public class StationManager implements Listener {
         travelingPlayers.put(player.getUniqueId(), destinationStation);
 
         // Teleport to train location for the line
-        player.teleport(trainLoc);
+        player.teleport(line.getTrainLocation(), PlayerTeleportEvent.TeleportCause.PLUGIN);
 
-        String destinationDisplayName = ftConfig.getString("stations." + destinationStation + ".display-name");
-        String destinationLine = ftConfig.getString("stations." + destinationStation + ".line");
-        String lineDisplayName = ftConfig.getString("lines." + destinationLine + ".display-name");
+        String destinationDisplayName = destStation.getDisplayName();
+        String lineDisplayName = line.getDisplayName();
 
         if (travelType.equals("international")) {
             player.sendMessage(ChatColor.GREEN + "You've boarded the train to " + ChatColor.GOLD + destinationDisplayName + ChatColor.GREEN + " in " + ChatColor.GOLD + lineDisplayName + ChatColor.GREEN + ". You will arrive in " + ChatColor.GOLD + (travelTimeTicks / 20) + ChatColor.GREEN + " seconds");
@@ -358,20 +167,15 @@ public class StationManager implements Listener {
             player.sendMessage(ChatColor.GREEN + "You've boarded the train to " + ChatColor.GOLD + destinationDisplayName + ChatColor.GREEN + ". You will arrive in " + ChatColor.GOLD + (travelTimeTicks / 20) + ChatColor.GREEN + " seconds");
         }
 
-        // Start journey with effects
         new BukkitRunnable() {
             int ticks = 0;
-
             @Override
             public void run() {
                 if (ticks >= travelTimeTicks) {
-                    // Complete journey
                     completeJourney(player, destinationStation, travelType);
                     cancel();
                     return;
                 }
-
-                // Create travel effects
                 Location loc = player.getLocation();
                 if (travelType.equals("international")) {
                     loc.getWorld().spawnParticle(Particle.PORTAL, loc, 15);
@@ -379,47 +183,31 @@ public class StationManager implements Listener {
                 } else {
                     loc.getWorld().spawnParticle(Particle.SMOKE, loc, 10);
                 }
-
                 if (ticks % 20 == 0) {
                     Sound sound = Sound.ENTITY_MINECART_RIDING;
                     player.playSound(loc, sound, 0.5f, 1.0f);
                 }
-
                 ticks++;
             }
         }.runTaskTimer(plugin, 0, 1);
     }
 
-    /**
-     * Completes the train journey for the player, teleporting them to the destination.
-     * @param player The player completing the journey.
-     * @param stationName The destination station's name.
-     * @param travelType The type of travel ("domestic" or "international").
-     */
     public void completeJourney(Player player, String stationName, String travelType) {
-        // Get station location
-        String worldName = ftConfig.getString("stations." + stationName + ".world");
-        double x = ftConfig.getDouble("stations." + stationName + ".x");
-        double y = ftConfig.getDouble("stations." + stationName + ".y");
-        double z = ftConfig.getDouble("stations." + stationName + ".z");
-
-        World world = Bukkit.getWorld(worldName);
-        if (world == null) {
-            player.sendMessage(ChatColor.RED + "Destination world not found!");
+        Station destStation = getStation(stationName);
+        if (destStation == null) {
+            player.sendMessage(ChatColor.RED + "Destination station not found!");
             travelingPlayers.remove(player.getUniqueId());
             return;
         }
+        Location destination = destStation.getLocation();
+        player.teleport(destination, PlayerTeleportEvent.TeleportCause.PLUGIN);
 
-        Location destination = new Location(world, x, y, z);
-        player.teleport(destination);
-
-        // Effects
         player.playSound(destination, Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.0f);
         destination.getWorld().spawnParticle(Particle.HAPPY_VILLAGER, destination, 20);
 
-        String displayName = ftConfig.getString("stations." + stationName + ".display-name");
-        String trainLine = ftConfig.getString("stations." + stationName + ".line");
-        String lineDisplayName = ftConfig.getString("lines." + trainLine + ".display-name");
+        String displayName = destStation.getDisplayName();
+        Line line = destStation.getLine();
+        String lineDisplayName = line != null ? line.getDisplayName() : "";
 
         if (travelType.equals("international")) {
             player.sendMessage(ChatColor.GOLD + "Welcome to " + lineDisplayName + "!");
@@ -431,62 +219,118 @@ public class StationManager implements Listener {
         travelingPlayers.remove(player.getUniqueId());
     }
 
-    /**
-     * Prevents Station Master NPCs from taking damage.
-     * @param event The EntityDamageEvent triggered by damage.
-     */
     @EventHandler(priority = EventPriority.HIGH)
     public void onVillagerDamage(EntityDamageEvent event) {
         if (!(event.getEntity() instanceof Villager villager)) return;
-        // Only protect villagers that are tracked as station NPCs
         if (!isStationMasterNPC(villager)) return;
         event.setCancelled(true);
     }
 
-    /**
-     * Prevents Station Master NPCs from dying.
-     * @param event The EntityDeathEvent triggered by villager death.
-     */
     @EventHandler(priority = EventPriority.HIGH)
     public void onVillagerDeath(EntityDeathEvent event) {
         if (!(event.getEntity() instanceof Villager villager)) return;
-        // Only protect villagers that are tracked as station NPCs
         if (!isStationMasterNPC(villager)) return;
         event.setCancelled(true);
     }
 
-    /**
-     * Checks if a villager is a Station Master NPC managed by this plugin.
-     */
     private boolean isStationMasterNPC(Villager villager) {
-        // Check by UUID
-        if (stationNPCs.containsValue(villager.getUniqueId())) return true;
-        // Fallback: check custom name
+        UUID uuid = villager.getUniqueId();
+        for (Station station : stations) {
+            String uuidStr = station.getStationMaster().getUniqueId().toString();
+            if (uuidStr != null && uuidStr.equals(uuid.toString())) {
+                return true;
+            }
+        }
         return villager.getCustomName() != null && villager.getCustomName().contains("Station Master");
     }
 
-    /**
-     * Save a banner item to config using serialization.
-     * @param banner The banner ItemStack to save.
-     * @param configPath The path in config (should be under "lines.<line>.<flag>").
-     * @return True if saved successfully, false otherwise.
-     */
-    public boolean saveBannerToConfig(ItemStack banner, String configPath) {
-        if (!(banner.getItemMeta() instanceof BannerMeta meta)) return false;
-        ftConfig.set(configPath, banner);
-        return true;
+    // --- In-memory containers and accessors ---
+
+    public List<Station> getStations() {
+        return stations;
+    }
+
+    public boolean isStation(String name) {
+        for (Station st : stations) {
+            if (st.getName().equalsIgnoreCase(name)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Nullable
+    public Station getStation(String name) {
+        for (Station st : stations) {
+            if (st.getName().equalsIgnoreCase(name)) {
+                return st;
+            }
+        }
+        return null;
+    }
+
+    public void addStation(Station station) {
+        this.stations.add(station);
+    }
+
+    public void removeStation(Station station) {
+        this.stations.remove(station);
+    }
+
+    public List<Line> getLines() {
+        return lines;
+    }
+
+    public boolean isLine(String name) {
+        for (Line line : lines) {
+            if (line.getName().equalsIgnoreCase(name)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public Line getLine(String name) {
+        for (Line line : lines) {
+            if (line.getName().equalsIgnoreCase(name)) {
+                return line;
+            }
+        }
+        return null;
+    }
+
+    public void addLine(Line line) {
+        this.lines.add(line);
+    }
+
+    public void removeLine(Line line) {
+        this.lines.remove(line);
     }
 
     /**
-     * Load a banner item from config using deserialization.
-     * @param configPath The path in config (should be under "lines.<line>.<flag>").
-     * @return The loaded banner ItemStack, or null if not found/invalid.
+     * Get the PendingTravel object for a player.
+     * @param traveller The player's UUID.
+     * @return The PendingTravel object, or null if none exists.
      */
-    public ItemStack loadBannerFromConfig(String configPath) {
-        Object obj = ftConfig.get(configPath);
-        if (obj instanceof ItemStack stack && stack.getItemMeta() instanceof BannerMeta) {
-            return stack;
-        }
-        return new ItemStack(Material.WHITE_BANNER); // Return a default banner if not found
+    public PendingTravel getPendingTravel(UUID traveller) {
+        return pendingTravel.get(traveller);
     }
+
+    /**
+     * Add or update a PendingTravel for a player.
+     * @param traveller The player's UUID.
+     * @param pending The PendingTravel object.
+     */
+    public void addPendingTravel(UUID traveller, PendingTravel pending) {
+        pendingTravel.put(traveller, pending);
+    }
+
+    /**
+     * Remove a PendingTravel for a player.
+     * @param traveller The player's UUID.
+     */
+    public void removePendingTravel(UUID traveller) {
+        pendingTravel.remove(traveller);
+    }
+
 }

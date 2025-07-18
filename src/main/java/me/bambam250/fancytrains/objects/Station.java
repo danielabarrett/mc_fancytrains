@@ -2,8 +2,13 @@ package me.bambam250.fancytrains.objects;
 
 import me.bambam250.fancytrains.Fancytrains;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.Location;
+import org.bukkit.World;
+import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Villager;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -12,13 +17,14 @@ import java.util.UUID;
 
 public class Station {
     Fancytrains plugin = Fancytrains.getPlugin(Fancytrains.class);
+    FileConfiguration ftConfig = plugin.configManager.getFtConfig();
 
-    private String name;
+    private final String name;
     private String displayName;
     private Location location;
-    private Line trainLine;
-    private List<Station> connections;
-    private Entity stationMaster;
+    private Line line;
+    private final List<Station> connections;
+    private UUID stationMasterUUID;
 
 
     /**
@@ -26,31 +32,26 @@ public class Station {
      * @param name the unique name of the station
      * @param displayName the display name of the station
      * @param location the location of the station in the world
-     * @param trainLine the name of the train line this station belongs to
-     * @param stationMasterUUID the UUID of the station master NPC, or null if not yet spawned
+     * @param line the train line this station belongs to
      */
-    public Station(String name, String displayName, Location location, String trainLine, UUID stationMasterUUID) {
+    public Station(String name, String displayName, Location location, Line line) {
         this.name = name;
         this.displayName = displayName;
         this.location = location;
-        this.trainLine = plugin.getLine(trainLine);
+        this.line = line;
         this.connections = new ArrayList<>();
 
-        this.stationMaster = location.getWorld().getEntity(stationMasterUUID);
-        if (this.stationMaster == null) {
-            spawnStationMaster();
-        }
+        spawnStationMaster();
 
-        plugin.configManager.ftConfig.set("stations." + name + ".location.world", location.getWorld().getName());
-        plugin.configManager.ftConfig.set("stations." + name + ".location.x", location.getX());
-        plugin.configManager.ftConfig.set("stations." + name + ".location.y", location.getY());
-        plugin.configManager.ftConfig.set("stations." + name + ".location.z", location.getZ());
-        plugin.configManager.ftConfig.set("stations." + name + ".location.yaw", location.getYaw());
-        plugin.configManager.ftConfig.set("stations." + name + ".location.pitch", location.getPitch());
-        plugin.configManager.ftConfig.set("stations." + name + ".display-name", displayName);
-        plugin.configManager.ftConfig.set("stations." + name + ".line", trainLine);
-//        plugin.configManager.ftConfig.set("stations." + name + ".npc-spawned", false);
-        plugin.configManager.ftConfig.set("stations." + name + ".connections", Arrays.asList());
+        ftConfig.set("stations." + name + ".location.world", location.getWorld().getName());
+        ftConfig.set("stations." + name + ".location.x", location.getX());
+        ftConfig.set("stations." + name + ".location.y", location.getY());
+        ftConfig.set("stations." + name + ".location.z", location.getZ());
+        ftConfig.set("stations." + name + ".location.yaw", location.getYaw());
+        ftConfig.set("stations." + name + ".location.pitch", location.getPitch());
+        ftConfig.set("stations." + name + ".display-name", displayName);
+        ftConfig.set("stations." + name + ".line", line.getName());
+        ftConfig.set("stations." + name + ".connections", Arrays.asList());
 
         plugin.configManager.saveStations();
     }
@@ -59,49 +60,98 @@ public class Station {
      * Constructor for loading an existing Station from config.
      * @param name the unique name of the station
      */
-    public Station(String name) {
+    public Station(String name, Line line) {
         this.name = name;
-        this.displayName = plugin.configManager.ftConfig.getString("stations." + name + ".display-name", name);
-        this.location = new Location(Bukkit.getWorld(plugin.configManager.ftConfig.getString("stations." + name + ".location.world")),
-                plugin.configManager.ftConfig.getDouble("stations." + name + ".location.x"),
-                plugin.configManager.ftConfig.getDouble("stations." + name + ".location.y"),
-                plugin.configManager.ftConfig.getDouble("stations." + name + ".location.z"),
-                (float) plugin.configManager.ftConfig.getDouble("stations." + name + ".location.yaw"),
-                (float) plugin.configManager.ftConfig.getDouble("stations." + name + ".location.pitch"));
-        this.trainLine = plugin.getLine(plugin.configManager.ftConfig.getString("stations." + name + ".line", "default"));
+        this.displayName = ftConfig.getString("stations." + name + ".display-name", name);
+        this.location = new Location(Bukkit.getWorld(
+                ftConfig.getString("stations." + name + ".location.world")),
+                ftConfig.getDouble("stations." + name + ".location.x"),
+                ftConfig.getDouble("stations." + name + ".location.y"),
+                ftConfig.getDouble("stations." + name + ".location.z"),
+                (float) ftConfig.getDouble("stations." + name + ".location.yaw"),
+                (float) ftConfig.getDouble("stations." + name + ".location.pitch"));
+        this.line = line;
         this.connections = new ArrayList<>();
+        String uuidStr = ftConfig.getString("stations." + name + ".npc");
+        this.stationMasterUUID = uuidStr != null ? UUID.fromString(uuidStr) : null;
+        if (this.stationMasterUUID == null) {
+            spawnStationMaster();
+        }
     }
 
-    public void spawnStationMaster() {
-        if (stationMaster != null) {
-            stationMaster.remove();
-        }
+    private void spawnStationMaster() {
+        World world = location.getWorld();
+        if (world == null) return;
+        Villager npc = (Villager) world.spawnEntity(location, EntityType.VILLAGER);
 
-        // Spawn a new station master NPC at the station location
-        // This is a placeholder, actual NPC spawning logic will depend on the NPC library used
-        stationMaster = Bukkit.getWorld(location.getWorld().getName()).spawnEntity(location, org.bukkit.entity.EntityType.VILLAGER);
-        stationMaster.setCustomName(displayName);
-        stationMaster.setCustomNameVisible(true);
+        npc.setCustomName(ChatColor.GOLD + "Station Master - " + displayName + " " + line.getColor() + "(" + line.getDisplayName() + ")");
+        npc.setCustomNameVisible(true);
+        npc.setAI(false);
+        npc.setInvulnerable(true);
+        npc.setCollidable(false);
+        npc.setSilent(true);
 
-        plugin.configManager.ftConfig.set("stations." + name + ".npc-spawned", true);
-        plugin.configManager.ftConfig.set("stations." + name + ".station-master-uuid", stationMaster.getUniqueId().toString());
+        this.stationMasterUUID = npc.getUniqueId();
+
+        ftConfig.set("stations." + name + ".npc", npc.getUniqueId().toString());
         plugin.configManager.saveStations();
     }
 
-    /**
-     * Load connections from the config file.
-     * This method populates the connections list with Station objects based on the stored connection names.
-     * This should be called after loading all stations from the config.
-     */
-    public void loadConnections() {
-        for (String conn : plugin.configManager.ftConfig.getStringList("stations." + name + ".connections")) {
-            Station station = plugin.getStation(conn);
-            if (station != null) {
-                connections.add(station);
+    public void removeStationMaster() {
+        if (stationMasterUUID != null) {
+            Entity entity = getStationMaster();
+            if (entity != null) {
+                entity.remove();
             }
+            ftConfig.set("stations." + name + ".npc", null);
+            plugin.configManager.saveStations();
+            stationMasterUUID = null;
         }
     }
 
+    /**
+     * Get the station master NPC entity if it is loaded.
+     * @return The Entity if loaded, otherwise null.
+     */
+    public Entity getStationMaster() {
+        if (stationMasterUUID == null) return null;
+        World world = location.getWorld();
+        if (world == null) return null;
+        for (Entity entity : world.getEntitiesByClass(Villager.class)) {
+            if (entity.getUniqueId().equals(stationMasterUUID)) {
+                return entity;
+            }
+        }
+        return null;
+    }
+
+    public void setStationMasterUUID(UUID uuid) {
+        this.stationMasterUUID = uuid;
+        if (uuid != null) {
+            ftConfig.set("stations." + name + ".npc", uuid.toString());
+        } else {
+            ftConfig.set("stations." + name + ".npc", null);
+        }
+        plugin.configManager.saveStations();
+    }
+
+    public UUID getStationMasterUUID() {
+        return stationMasterUUID;
+    }
+
+    /**
+     * Move the station master NPC to a new location without changing the station's location.
+     * @param newLocation The new location for the station master NPC.
+     * @return true if the NPC was moved, false if not found.
+     */
+    public boolean setStationMasterLocation(Location newLocation) {
+        Entity stationMaster = getStationMaster();
+        if (stationMaster == null) {
+            return false;
+        }
+        stationMaster.teleport(newLocation);
+        return true;
+    }
 
     // Getters and Setters
 
@@ -117,7 +167,7 @@ public class Station {
 
     public void setDisplayName(String displayName) {
         this.displayName = displayName;
-        plugin.configManager.ftConfig.set("stations." + name + ".display-name", displayName);
+        ftConfig.set("stations." + name + ".display-name", displayName);
         plugin.configManager.saveStations();
     }
 
@@ -127,24 +177,24 @@ public class Station {
 
     public void setLocation(Location location) {
         this.location = location;
-        plugin.configManager.ftConfig.set("stations." + name + ".location.world", location.getWorld().getName());
-        plugin.configManager.ftConfig.set("stations." + name + ".location.x", location.getX());
-        plugin.configManager.ftConfig.set("stations." + name + ".location.y", location.getY());
-        plugin.configManager.ftConfig.set("stations." + name + ".location.z", location.getZ());
-        plugin.configManager.ftConfig.set("stations." + name + ".location.yaw", location.getYaw());
-        plugin.configManager.ftConfig.set("stations." + name + ".location.pitch", location.getPitch());
+        ftConfig.set("stations." + name + ".location.world", location.getWorld().getName());
+        ftConfig.set("stations." + name + ".location.x", location.getX());
+        ftConfig.set("stations." + name + ".location.y", location.getY());
+        ftConfig.set("stations." + name + ".location.z", location.getZ());
+        ftConfig.set("stations." + name + ".location.yaw", location.getYaw());
+        ftConfig.set("stations." + name + ".location.pitch", location.getPitch());
         plugin.configManager.saveStations();
     }
 
-    public Line getTrainLine() {
-        return trainLine;
+    public Line getLine() {
+        return line;
     }
 
-    public void setTrainLine(Line line) {
-        this.trainLine.removeStation(this);
-        this.trainLine = line;
-        this.trainLine.addStation(this);
-        plugin.configManager.ftConfig.set("stations." + name + ".line", line.getName());
+    public void setLine(Line line) {
+        this.line.removeStation(this);
+        this.line = line;
+        this.line.addStation(this);
+        ftConfig.set("stations." + name + ".line", line.getName());
         plugin.configManager.saveStations();
     }
 
@@ -155,7 +205,7 @@ public class Station {
     public void addConnection(Station station) {
         if (!connections.contains(station)) {
             connections.add(station);
-            plugin.configManager.ftConfig.set("stations." + name + ".connections", connections.stream().map(Station::getName).toList());
+            ftConfig.set("stations." + name + ".connections", connections.stream().map(Station::getName).toList());
             plugin.configManager.saveStations();
         }
     }
@@ -163,7 +213,7 @@ public class Station {
     public void removeConnection(Station station) {
         if (connections.contains(station)) {
             connections.remove(station);
-            plugin.configManager.ftConfig.set("stations." + name + ".connections", connections.stream().map(Station::getName).toList());
+            ftConfig.set("stations." + name + ".connections", connections.stream().map(Station::getName).toList());
             plugin.configManager.saveStations();
         }
     }

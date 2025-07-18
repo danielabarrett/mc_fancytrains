@@ -4,6 +4,7 @@ import me.bambam250.fancytrains.Fancytrains;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BannerMeta;
 
@@ -13,6 +14,7 @@ import java.util.List;
 
 public class Line {
     Fancytrains plugin = Fancytrains.getPlugin(Fancytrains.class);
+    FileConfiguration ftConfig = plugin.configManager.getFtConfig();
 
     private String name;
     private String displayName;
@@ -32,20 +34,20 @@ public class Line {
         this.color = ChatColor.valueOf(color);
         this.displayName = displayName;
         this.trainLocation = trainLocation;
-        this.stations = new ArrayList<Station>();
+        this.stations = new ArrayList<>();
         this.flag = new ItemStack(Material.WHITE_BANNER);
 
-        plugin.configManager.ftConfig.set("lines." + name + ".display-name", displayName);
-        plugin.configManager.ftConfig.set("lines." + name + ".color", color);
-        plugin.configManager.ftConfig.set("lines." + name + ".stations", new ArrayList<String>());
+        ftConfig.set("lines." + name + ".display-name", displayName);
+        ftConfig.set("lines." + name + ".color", color);
+        ftConfig.set("lines." + name + ".stations", new ArrayList<String>());
         plugin.configManager.saveStations();;
     }
 
     public Line(String name) {
-        this.name = plugin.configManager.ftConfig.getString("lines." + name + ".name");
-        this.color = ChatColor.valueOf(plugin.configManager.ftConfig.getString("lines." + name + ".color", "WHITE"));
-        this.displayName = plugin.configManager.ftConfig.getString("lines." + name + ".display-name", name);
-        this.trainLocation = plugin.configManager.ftConfig.getLocation("lines." + name + ".train-location");
+        this.name = name;
+        this.color = ChatColor.valueOf(ftConfig.getString("lines." + name + ".color", "WHITE"));
+        this.displayName = ftConfig.getString("lines." + name + ".display-name", name);
+        this.trainLocation = ftConfig.getLocation("lines." + name + ".train-location");
         this.stations = new ArrayList<>();
         this.flag = loadBannerFromConfig("lines." + name + ".flag");
     }
@@ -62,13 +64,13 @@ public class Line {
 
     public void setColor(ChatColor color) {
         this.color = color;
-        plugin.configManager.ftConfig.set("lines." + name + ".color", color.name());
+        ftConfig.set("lines." + name + ".color", color.name());
         plugin.configManager.saveStations();
     }
 
     public void setColor(String color) {
         this.color = ChatColor.valueOf(color);
-        plugin.configManager.ftConfig.set("lines." + name + ".color", color);
+        ftConfig.set("lines." + name + ".color", color);
         plugin.configManager.saveStations();
     }
 
@@ -78,7 +80,7 @@ public class Line {
 
     public void setDisplayName(String displayName) {
         this.displayName = displayName;
-        plugin.configManager.ftConfig.set("lines." + name + ".display-name", displayName);
+        ftConfig.set("lines." + name + ".display-name", displayName);
         plugin.configManager.saveStations();
     }
 
@@ -88,7 +90,7 @@ public class Line {
 
     public void setTrainLocation(Location trainLocation) {
         this.trainLocation = trainLocation;
-        plugin.configManager.ftConfig.set("lines." + name + ".train-location", trainLocation);
+        ftConfig.set("lines." + name + ".train-location", trainLocation);
         plugin.configManager.saveStations();
     }
 
@@ -96,13 +98,13 @@ public class Line {
         if (!stations.contains(station)) {
             stations.add(station);
         }
-        plugin.configManager.ftConfig.set("lines." + name + ".stations", stations.stream().map(Station::getName).toList());
+        ftConfig.set("lines." + name + ".stations", stations.stream().map(Station::getName).toList());
         plugin.configManager.saveStations();
     }
 
     public void removeStation(Station station) {
         stations.remove(station);
-        plugin.configManager.ftConfig.set("lines." + name + ".stations", stations.stream().map(Station::getName).toList());
+        ftConfig.set("lines." + name + ".stations", stations.stream().map(Station::getName).toList());
         plugin.configManager.saveStations();
     }
 
@@ -137,7 +139,7 @@ public class Line {
      */
     private boolean saveBannerToConfig(ItemStack banner, String configPath) {
         if (!(banner.getItemMeta() instanceof BannerMeta meta)) return false;
-        plugin.configManager.ftConfig.set(configPath, banner);
+        ftConfig.set(configPath, banner);
         plugin.configManager.saveStations();
         return true;
     }
@@ -148,7 +150,7 @@ public class Line {
      * @return The loaded banner ItemStack, or null if not found/invalid.
      */
     private ItemStack loadBannerFromConfig(String configPath) {
-        Object obj = plugin.configManager.ftConfig.get(configPath);
+        Object obj = ftConfig.get(configPath);
         if (obj instanceof ItemStack stack && stack.getItemMeta() instanceof BannerMeta) {
             return stack;
         }

@@ -59,57 +59,6 @@ public final class Fancytrains extends JavaPlugin {
     }
 
 
-    public List<Station> getStations() {
-        return stations;
-    }
 
-    public boolean isStation(String name) {
-        for (Station st : stations) {
-            if (st.getName().equalsIgnoreCase(name)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    @Nullable
-    public Station getStation(String name) {
-        for (Station st : stations) {
-            if (st.getName().equalsIgnoreCase(name)) {
-                return st;
-            }
-        }
-        return null;
-    }
-
-    public void addStation(Station station) {
-        this.stations.add(station);
-    }
-
-    public List<Line> getLines() {
-        return lines;
-    }
-
-    public boolean isLine(String name) {
-        for (Line line : lines) {
-            if (line.getName().equalsIgnoreCase(name)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    public Line getLine(String name) {
-        for (Line line : lines) {
-            if (line.getName().equalsIgnoreCase(name)) {
-                return line;
-            }
-        }
-        return null;
-    }
-
-    public void addLine(Line line) {
-        this.lines.add(line);
-    }
 
 }

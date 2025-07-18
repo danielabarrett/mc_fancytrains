@@ -6,6 +6,7 @@ import me.bambam250.fancytrains.objects.Station;
 import org.bukkit.*;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
+import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
@@ -136,46 +137,24 @@ public class StationGUIManager {
         String menuTitle = travelType.equals("domestic") ? "Domestic Destinations" : "International Destinations";
         Inventory inv = Bukkit.createInventory(null, size, ChatColor.DARK_BLUE + menuTitle);
 
-        // Get current line train location for travel time calculation
-        Location currentLoc = currentLine != null ? currentLine.getTrainLocation() : null;
-        if (currentLoc == null) {
-            currentLoc = currentStation.getLocation();
-        }
-
         int slot = 0;
         for (Station station : filteredConnections) {
             Line trainLine = station.getLine();
             String lineDisplayName = trainLine != null ? trainLine.getDisplayName() : "Unknown";
             ChatColor lineColor = trainLine != null ? trainLine.getColor() : ChatColor.WHITE;
 
-            ItemStack item;
-            if (travelType.equals("domestic")) {
-                item = new ItemStack(Material.RAIL);
-            } else {
-                item = trainLine != null ? trainLine.getFlag() : new ItemStack(Material.WHITE_BANNER);
-            }
+            ItemStack item = trainLine != null ? trainLine.getFlag() : new ItemStack(Material.WHITE_BANNER);
             ItemMeta meta = item.getItemMeta();
 
             String displayName = station.getDisplayName();
 
-            // Calculate travel time
-            Location destLoc = trainLine != null ? trainLine.getTrainLocation() : null;
-            if (destLoc == null) {
-                destLoc = station.getLocation();
-            }
-            String travelTimeStr = "";
-            if (currentLoc != null && destLoc != null && currentLoc.getWorld().equals(destLoc.getWorld())) {
-                int travelTimeTicks = (int) currentLoc.distance(destLoc);
-                String formattedTime = Fancytrains.formatTime(travelTimeTicks);
-                travelTimeStr = ChatColor.AQUA + "Travel Time: " + formattedTime + "s";
-            }
+            // Use Station's built-in function to get formatted travel time
+            String travelTimeStr = currentStation.getTravelTime(station);
 
             List<String> lore = new ArrayList<>();
             lore.add(ChatColor.GRAY + "Click to travel to " + displayName);
             lore.add(lineColor + "Line: " + lineDisplayName);
-            if (!travelTimeStr.isEmpty()) {
-                lore.add(travelTimeStr);
-            }
+            lore.add(ChatColor.AQUA + "Travel Time: " + travelTimeStr);
 
             meta.addItemFlags(ItemFlag.HIDE_ADDITIONAL_TOOLTIP);
             meta.setDisplayName(ChatColor.YELLOW + displayName);
@@ -205,13 +184,30 @@ public class StationGUIManager {
         String menuTitle = ChatColor.DARK_GREEN + "Confirm Travel";
         Inventory inv = Bukkit.createInventory(null, 9, menuTitle);
 
+        // Use player's current station for travel time calculation
+        Station currentStation = null;
+        for (Station station : stationManager.getStations()) {
+            if (station.getStationMaster() != null && station.getStationMaster().getUniqueId().equals(player.getUniqueId())) {
+                currentStation = station;
+                break;
+            }
+        }
+        // Fallback: use player's location as current station if not found
+        String travelTimeStr;
+        if (currentStation != null) {
+            travelTimeStr = currentStation.getTravelTime(destStation);
+        } else {
+            // fallback to seconds argument if current station is unknown
+            travelTimeStr = Fancytrains.formatTime(travelTimeSeconds * 20);
+        }
+
         // Confirm item
         ItemStack confirm = new ItemStack(Material.LIME_CONCRETE);
         ItemMeta confirmMeta = confirm.getItemMeta();
         confirmMeta.setDisplayName(ChatColor.GREEN + "Confirm Travel");
         List<String> confirmLore = new ArrayList<>();
         confirmLore.add(ChatColor.YELLOW + "Destination: " + displayName);
-        confirmLore.add(ChatColor.AQUA + "Travel Time: " + travelTimeSeconds + "s");
+        confirmLore.add(ChatColor.AQUA + "Travel Time: " + travelTimeStr);
         confirmMeta.setLore(confirmLore);
         confirm.setItemMeta(confirmMeta);
         inv.setItem(3, confirm);
@@ -236,7 +232,7 @@ public class StationGUIManager {
      * @param title The inventory title.
      * @param stationManager The StationManager instance.
      */
-    public void handleInventoryClick(org.bukkit.event.inventory.InventoryClickEvent event, Player player, String title, StationManager stationManager) {
+    public void handleInventoryClick(InventoryClickEvent event, Player player, String title, StationManager stationManager) {
         if (title.startsWith(ChatColor.DARK_BLUE + "Travel Type")) {
             event.setCancelled(true);
 
@@ -244,22 +240,22 @@ public class StationGUIManager {
 
             String currentStation = title.substring(title.lastIndexOf(" - ") + 3);
             // Find station by display name
-            String stationName = null;
-            for (String name : ftConfig.getConfigurationSection("stations").getKeys(false)) {
-                if (ftConfig.getString("stations." + name + ".display-name").equals(currentStation)) {
-                    stationName = name;
+            Station destStation = null;
+            for (Station station : stationManager.getStations()) {
+                if (station.getDisplayName().equals(currentStation)) {
+                    destStation = station;
                     break;
                 }
             }
 
-            if (stationName == null) return;
+            if (destStation == null) return;
 
             if (event.getCurrentItem().getType() == Material.EMERALD) {
                 player.closeInventory();
-                plugin.GUIManager.openDestinationMenu(player, stationName, "domestic");
+                plugin.GUIManager.openDestinationMenu(player, destStation.getName(), "domestic");
             } else if (event.getCurrentItem().getType() == Material.DIAMOND) {
                 player.closeInventory();
-                plugin.GUIManager.openDestinationMenu(player, stationName, "international");
+                plugin.GUIManager.openDestinationMenu(player, destStation.getName(), "international");
             }
             return;
         }
@@ -268,22 +264,20 @@ public class StationGUIManager {
                 title.equals(ChatColor.DARK_BLUE + "International Destinations")) {
             event.setCancelled(true);
 
-            if (event.getCurrentItem() == null ||
-                    (event.getCurrentItem().getType() != Material.RAIL &&
-                            !BANNERS.contains(event.getCurrentItem().getType()))) return;
+            if (event.getCurrentItem() == null || !BANNERS.contains(event.getCurrentItem().getType())) return;
 
             String displayName = ChatColor.stripColor(event.getCurrentItem().getItemMeta().getDisplayName());
 
             // Find station by display name
-            String stationName = null;
-            for (String name : ftConfig.getConfigurationSection("stations").getKeys(false)) {
-                if (ftConfig.getString("stations." + name + ".display-name").equals(displayName)) {
-                    stationName = name;
+            Station destStation = null;
+            for (Station station : stationManager.getStations()) {
+                if (station.getDisplayName().equals(displayName)) {
+                    destStation = station;
                     break;
                 }
             }
 
-            if (stationName == null) {
+            if (destStation == null) {
                 player.sendMessage(ChatColor.RED + "Station not found!");
                 return;
             }
@@ -296,14 +290,11 @@ public class StationGUIManager {
             // Calculate travel time in seconds
             Location currentLoc = player.getLocation();
             Location destLoc = null;
-            Station destStation = stationManager.getStation(stationName);
-            if (destStation != null) {
-                Line destLine = destStation.getLine();
-                if (destLine != null && destLine.getTrainLocation() != null) {
-                    destLoc = destLine.getTrainLocation();
-                } else {
-                    destLoc = destStation.getLocation();
-                }
+            Line destLine = destStation.getLine();
+            if (destLine != null && destLine.getTrainLocation() != null) {
+                destLoc = destLine.getTrainLocation();
+            } else {
+                destLoc = destStation.getLocation();
             }
             int travelTimeSeconds;
             if (currentLoc != null && destLoc != null && currentLoc.getWorld().equals(destLoc.getWorld())) {
@@ -311,11 +302,11 @@ public class StationGUIManager {
                 if (travelTimeSeconds < 1) travelTimeSeconds = 1;
             } else {
                 travelTimeSeconds = 5; // fallback default
-                Bukkit.getLogger().log(Level.WARNING, "Could not calculate travel time for " + stationName + ". Using default 5 seconds.");
+                Bukkit.getLogger().log(Level.WARNING, "Could not calculate travel time for " + destStation.getName() + ". Using default 5 seconds.");
             }
 
             // Open confirmation GUI
-            plugin.GUIManager.openTravelConfirmMenu(player, stationName, travelType, travelTimeSeconds);
+            plugin.GUIManager.openTravelConfirmMenu(player, destStation.getName(), travelType, travelTimeSeconds);
             return;
         }
 

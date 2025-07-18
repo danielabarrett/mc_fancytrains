@@ -153,6 +153,29 @@ public class Station {
         return true;
     }
 
+    /**
+     * Calculates the travel time from this station to another station and returns a formatted string.
+     * The time is based on the distance between the train locations of the lines, or the station locations if not set.
+     * @param destination The destination station.
+     * @return A formatted string representing the travel time (e.g., "5s" or "01:23").
+     */
+    public String getTravelTime(Station destination) {
+        return getTravelTime(destination.getLocation());
+    }
+
+    public String getTravelTime(Location destination) {
+        if (location == null || destination == null || location.getWorld() == null || destination.getWorld() == null
+                || !location.getWorld().equals(destination.getWorld())) {
+            return "0s";
+        }
+        int ticks = (int) location.distance(destination); // 1 block = 20 ticks
+        int seconds =  ticks / 20;
+        int minutes = seconds / 60;
+        seconds %= 60;
+//        return minutes > 0 ? String.format("%02d:%02d", minutes, seconds) : String.format("00:%02d seconds", seconds);
+        return String.format("%02d:%02d", minutes, seconds);
+    }
+
     // Getters and Setters
 
     public String getName() {
